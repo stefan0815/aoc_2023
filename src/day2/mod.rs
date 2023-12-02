@@ -20,7 +20,7 @@ fn get_sum_of_possible_game_ids(
         .sum();
 }
 
-fn parse_game(input: Vec<String>) -> Vec<(u32, (u32, u32, u32))> {
+fn parse_games(input: Vec<String>) -> Vec<(u32, (u32, u32, u32))> {
     // id, (red, green, blue)
     let mut games: Vec<(u32, (u32, u32, u32))> = Vec::new();
     for line in input {
@@ -65,7 +65,7 @@ fn get_input(file: &str) -> Vec<String> {
 
 pub fn solver() {
     let input = get_input("./src/day2/input.txt");
-    let games = parse_game(input);
+    let games = parse_games(input);
     let sum_part_one = get_sum_of_possible_game_ids(&games, (12, 13, 14));
     let sum_part_two = get_sum_of_cube_power(&games);
     println!("Part 1: {sum_part_one}");
@@ -79,7 +79,7 @@ mod tests {
     #[test]
     fn day2_example_input_part_one() {
         let input = get_input("./src/day2/example_input.txt");
-        let games = parse_game(input);
+        let games = parse_games(input);
         let sum = get_sum_of_possible_game_ids(&games, (12, 13, 14));
         assert_eq!(8, sum);
     }
@@ -87,7 +87,7 @@ mod tests {
     #[test]
     fn day2_example_input_part_two() {
         let input = get_input("./src/day2/example_input.txt");
-        let games = parse_game(input);
+        let games = parse_games(input);
         let power = get_sum_of_cube_power(&games);
         assert_eq!(2286, power);
     }
@@ -95,7 +95,7 @@ mod tests {
     #[test]
     fn day2_input_part_one() {
         let input = get_input("./src/day2/input.txt");
-        let games = parse_game(input);
+        let games = parse_games(input);
         let sum = get_sum_of_possible_game_ids(&games, (12, 13, 14));
         assert_eq!(2268, sum);
     }
@@ -103,7 +103,7 @@ mod tests {
     #[test]
     fn day2_input_part_two() {
         let input = get_input("./src/day2/input.txt");
-        let games = parse_game(input);
+        let games = parse_games(input);
         let power = get_sum_of_cube_power(&games);
         assert_eq!(63542, power);
     }
