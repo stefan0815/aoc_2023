@@ -16,7 +16,7 @@ fn find_start(line: &Vec<char>, index: usize) -> usize {
             return i + 1;
         }
     }
-    0
+    return 0;
 }
 
 fn find_part(line: &Vec<char>, row: usize, col: usize) -> Part {
@@ -50,37 +50,37 @@ fn find_parts_around(schematic: &Vec<Vec<char>>, (y, x): (usize, usize)) -> Hash
 
 fn solve_part_one(schematic: &Vec<Vec<char>>) -> u32 {
     let mut parts: HashSet<Part> = HashSet::new();
-    for row in 0..schematic.len() {
-        let line = &schematic[row];
-        for col in 0..line.len() {
-            let char = line[col];
-            if !char.is_numeric() && char != '.' {
-                parts.extend(find_parts_around(&schematic, (row, col)));
-            }
-        }
-    }
+
+    schematic
+        .iter()
+        .enumerate()
+        .for_each(|(row, &ref line)| {
+            line.iter()
+                .enumerate()
+                .filter(|(_, &char)| !char.is_numeric() && char != '.')
+                .for_each(|(col, &_)| parts.extend(find_parts_around(&schematic, (row, col))))
+        });
 
     parts.iter().map(|part| part.number).sum()
 }
 
 fn solve_part_two(schematic: &Vec<Vec<char>>) -> u32 {
-    let mut sum = 0;
-
-    for row in 0..schematic.len() {
-        let line = &schematic[row];
-        for col in 0..line.len() {
-            let char = line[col];
-            if char == '*' {
-                let parts = find_parts_around(&schematic, (row, col));
-                if parts.len() == 2 {
-                    let numbers: Vec<u32> = parts.iter().map(|part| part.number).collect();
-                    sum += numbers[0] * numbers[1];
-                }
-            }
-        }
-    }
-
-    sum
+    schematic
+        .iter()
+        .enumerate()
+        .map(|(row, &ref line)| {
+            line.iter()
+                .enumerate()
+                .filter(|(_, &char)| char == '*')
+                .map(|(col, &_)| find_parts_around(&schematic, (row, col)))
+                .filter(|parts| parts.len() == 2)
+                .map(|two_part_gears| {
+                    let numbers: Vec<u32> = two_part_gears.iter().map(|part| part.number).collect();
+                    numbers[0] * numbers[1]
+                })
+                .sum::<u32>()
+        })
+        .sum::<u32>()
 }
 
 fn get_input(file: &str) -> Vec<Vec<char>> {
