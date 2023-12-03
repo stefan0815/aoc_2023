@@ -51,15 +51,12 @@ fn find_parts_around(schematic: &Vec<Vec<char>>, (y, x): (usize, usize)) -> Hash
 fn solve_part_one(schematic: &Vec<Vec<char>>) -> u32 {
     let mut parts: HashSet<Part> = HashSet::new();
 
-    schematic
-        .iter()
-        .enumerate()
-        .for_each(|(row, &ref line)| {
-            line.iter()
-                .enumerate()
-                .filter(|(_, &char)| !char.is_numeric() && char != '.')
-                .for_each(|(col, &_)| parts.extend(find_parts_around(&schematic, (row, col))))
-        });
+    schematic.iter().enumerate().for_each(|(row, &ref line)| {
+        line.iter()
+            .enumerate()
+            .filter(|(_, &char)| !char.is_numeric() && char != '.')
+            .for_each(|(col, &_)| parts.extend(find_parts_around(&schematic, (row, col))))
+    });
 
     parts.iter().map(|part| part.number).sum()
 }
@@ -75,8 +72,11 @@ fn solve_part_two(schematic: &Vec<Vec<char>>) -> u32 {
                 .map(|(col, &_)| find_parts_around(&schematic, (row, col)))
                 .filter(|parts| parts.len() == 2)
                 .map(|two_part_gears| {
-                    let numbers: Vec<u32> = two_part_gears.iter().map(|part| part.number).collect();
-                    numbers[0] * numbers[1]
+                    two_part_gears
+                        .iter()
+                        .map(|part| part.number)
+                        .reduce(|part1, part2| part1 * part2)
+                        .unwrap()
                 })
                 .sum::<u32>()
         })
