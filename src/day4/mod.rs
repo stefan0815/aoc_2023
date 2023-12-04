@@ -78,7 +78,7 @@ fn get_input(file: &str) -> Vec<String> {
 }
 
 pub fn solver() {
-    let input = get_input("./src/day2/input.txt");
+    let input = get_input("./src/day4/input.txt");
     let sum_part_one = solve_part_one(&input);
     let sum_part_two = solve_part_two(&input);
     println!("Part 1: {sum_part_one}");
