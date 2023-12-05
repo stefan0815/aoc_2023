@@ -76,7 +76,7 @@ fn solve_part_two(groups: &Vec<String>) -> u128 {
             if skip == u128::MAX{
                 break;
             }
-            seed += 1;
+            seed += skip;
         }
     }
     min_location
