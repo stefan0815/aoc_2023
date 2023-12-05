@@ -1,4 +1,5 @@
-use std::{fs, cmp::min};
+use std::{cmp::min, fs};
+use test::Bencher;
 
 fn get_seed_and_maps(groups: &Vec<String>) -> (Vec<u128>, Vec<Vec<Vec<u128>>>) {
     let seeds: Vec<u128> = groups
@@ -120,5 +121,17 @@ mod tests {
         let input = get_input("./src/day5/input.txt");
         let sum_part_two = solve_part_two(&input);
         assert_eq!(69323688, sum_part_two);
+    }
+
+    #[bench]
+    fn bench_part_one(b: &mut Bencher) {
+        let input = get_input("./src/day5/input.txt");
+        b.iter(|| solve_part_one(&input))
+    }
+
+    #[bench]
+    fn bench_part_two(b: &mut Bencher) {
+        let input = get_input("./src/day5/input.txt");
+        b.iter(|| solve_part_two(&input))
     }
 }
