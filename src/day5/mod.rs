@@ -1,7 +1,7 @@
 use std::{cmp::min, fs};
 use test::Bencher;
 
-fn get_seed_and_maps(groups: &Vec<String>) -> (Vec<u128>, Vec<Vec<Vec<u128>>>) {
+fn get_seed_and_maps(groups: &Vec<String>) -> (Vec<u128>, Vec<Vec<[u128; 3]>>) {
     let seeds: Vec<u128> = groups
         .first()
         .unwrap()
@@ -10,7 +10,7 @@ fn get_seed_and_maps(groups: &Vec<String>) -> (Vec<u128>, Vec<Vec<Vec<u128>>>) {
         .map(|s| s.parse::<u128>().unwrap())
         .collect();
 
-    let maps: Vec<Vec<Vec<u128>>> = groups
+    let maps: Vec<Vec<[u128; 3]>> = groups
         .iter()
         .skip(1)
         .map(|group| {
@@ -18,10 +18,12 @@ fn get_seed_and_maps(groups: &Vec<String>) -> (Vec<u128>, Vec<Vec<Vec<u128>>>) {
                 .split("\r\n")
                 .skip(1)
                 .map(|line| {
-                    line.split_whitespace()
+                    let vec = line
+                        .split_whitespace()
                         .map(|s| s.parse::<u128>().unwrap())
                         .into_iter()
-                        .collect::<Vec<u128>>()
+                        .collect::<Vec<u128>>();
+                    [vec[0], vec[1], vec[2]]
                 })
                 .collect()
         })
@@ -29,7 +31,7 @@ fn get_seed_and_maps(groups: &Vec<String>) -> (Vec<u128>, Vec<Vec<Vec<u128>>>) {
     return (seeds, maps);
 }
 
-fn get_location_and_skip(seed: u128, maps: &Vec<Vec<Vec<u128>>>) -> (u128, u128) {
+fn get_location_and_skip(seed: u128, maps: &Vec<Vec<[u128; 3]>>) -> (u128, u128) {
     let mut value = seed;
     let mut skip = u128::MAX;
     for map in maps {
