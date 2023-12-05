@@ -34,9 +34,9 @@ fn get_location_and_skip(seed: u128, maps: &Vec<Vec<Vec<u128>>>) -> (u128, u128)
     let mut skip = u128::MAX;
     for map in maps {
         for mapping in map {
-            if (*mapping)[1] <= value && value < (*mapping)[1] + (*mapping)[2] {
-                skip = min(skip, (*mapping)[1] + (*mapping)[2] - value);
-                value = (*mapping)[0] + value - (*mapping)[1];
+            if mapping[1] <= value && value < mapping[1] + mapping[2] {
+                skip = min(skip, mapping[1] + mapping[2] - value);
+                value = mapping[0] + value - mapping[1];
                 break;
             }
         }
