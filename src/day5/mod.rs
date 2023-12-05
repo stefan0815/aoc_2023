@@ -1,4 +1,4 @@
-use std::{fs};
+use std::{fs, cmp::min};
 
 fn get_seed_and_maps(groups: &Vec<String>) -> (Vec<u128>, Vec<Vec<Vec<u128>>>) {
     let seeds: Vec<u128> = groups
@@ -28,24 +28,26 @@ fn get_seed_and_maps(groups: &Vec<String>) -> (Vec<u128>, Vec<Vec<Vec<u128>>>) {
     return (seeds, maps);
 }
 
-fn get_location(seed:u128, maps: &Vec<Vec<Vec<u128>>>) -> u128{
+fn get_location_and_skip(seed: u128, maps: &Vec<Vec<Vec<u128>>>) -> (u128, u128) {
     let mut value = seed;
+    let mut skip = u128::MAX;
     for map in maps {
         for mapping in map {
-            if (*mapping)[1] <= value && value < (*mapping)[1] + (*mapping)[2]{
+            if (*mapping)[1] <= value && value < (*mapping)[1] + (*mapping)[2] {
+                skip = min(skip, (*mapping)[1] + (*mapping)[2] - value);
                 value = (*mapping)[0] + value - (*mapping)[1];
                 break;
             }
         }
     }
-    value
+    (value, skip)
 }
 
 fn solve_part_one(groups: &Vec<String>) -> u128 {
     let mut min_location = u128::MAX;
     let (seeds, maps) = get_seed_and_maps(groups);
     for seed in seeds {
-        let location = get_location(seed, &maps);
+        let (location, _) = get_location_and_skip(seed, &maps);
         if location < min_location {
             min_location = location;
         }
@@ -57,12 +59,14 @@ fn solve_part_two(groups: &Vec<String>) -> u128 {
     let mut min_location = u128::MAX;
     let (seed_range, maps) = get_seed_and_maps(groups);
 
-    for i in (0..seed_range.len()).step_by(2){
-        for seed in seed_range[i]..(seed_range[i]+seed_range[i+1]) {
-            let location = get_location(seed, &maps);
+    for i in (0..seed_range.len()).step_by(2) {
+        let mut seed = seed_range[i];
+        while seed < seed_range[i] + seed_range[i + 1] {
+            let (location, skip) = get_location_and_skip(seed, &maps);
             if location < min_location {
                 min_location = location;
             }
+            seed += skip;
         }
     }
     min_location
@@ -115,6 +119,6 @@ mod tests {
     fn day5_input_part_two() {
         let input = get_input("./src/day5/input.txt");
         let sum_part_two = solve_part_two(&input);
-        assert_eq!(11024379, sum_part_two);
+        assert_eq!(69323688, sum_part_two);
     }
 }
