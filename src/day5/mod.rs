@@ -41,6 +41,10 @@ fn get_location_and_skip(seed: u128, maps: &Vec<Vec<[u128; 3]>>) -> (u128, u128)
                 value = mapping[0] + value - mapping[1];
                 break;
             }
+
+            if value < mapping[1] {
+                skip = min(skip, mapping[1] - value);
+            }
         }
     }
     (value, skip)
@@ -69,7 +73,10 @@ fn solve_part_two(groups: &Vec<String>) -> u128 {
             if location < min_location {
                 min_location = location;
             }
-            seed += skip;
+            if skip == u128::MAX{
+                break;
+            }
+            seed += 1;
         }
     }
     min_location
