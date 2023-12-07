@@ -8,21 +8,6 @@ struct Hand {
     line: String,
 }
 
-impl Ord for Hand {
-    fn cmp(&self, other: &Self) -> Ordering {
-        if self.hand_type == other.hand_type {
-            for i in 0..self.cards.len() {
-                if self.cards[i] == other.cards[i] {
-                    continue;
-                }
-                return self.cards[i].cmp(&other.cards[i]);
-            }
-            return Ordering::Equal;
-        }
-        self.hand_type.cmp(&other.hand_type)
-    }
-}
-
 fn get_type_of_cards(cards: &Vec<u32>) -> usize {
     let set: HashSet<u32> = HashSet::from_iter(cards.clone());
     let vec_set: Vec<u32> = set.into_iter().collect();
@@ -63,7 +48,8 @@ fn optimize_hand(hand: Hand) -> Hand {
 
 fn sort_hands(hands: Vec<Hand>) -> Vec<Hand> {
     let mut sorted_hands = hands;
-    sorted_hands.sort_by(|a, b| b.cmp(&a));
+    sorted_hands.sort_unstable_by_key(|hand| (hand.hand_type, hand.cards[0], hand.cards[1],hand.cards[2],hand.cards[3],hand.cards[4]));
+    sorted_hands.reverse();
     sorted_hands
 }
 
