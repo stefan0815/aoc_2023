@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, collections::HashSet, fs};
+use std::{collections::HashSet, fs};
 
 #[derive(Clone, PartialOrd, PartialEq, Eq, Hash)]
 struct Hand {
@@ -48,8 +48,16 @@ fn optimize_hand(hand: Hand) -> Hand {
 
 fn sort_hands(hands: Vec<Hand>) -> Vec<Hand> {
     let mut sorted_hands = hands;
-    sorted_hands.sort_unstable_by_key(|hand| (hand.hand_type, hand.cards[0], hand.cards[1],hand.cards[2],hand.cards[3],hand.cards[4]));
-    sorted_hands.reverse();
+    sorted_hands.sort_unstable_by_key(|hand| {
+        (
+            hand.hand_type,
+            hand.cards[0],
+            hand.cards[1],
+            hand.cards[2],
+            hand.cards[3],
+            hand.cards[4],
+        )
+    });
     sorted_hands
 }
 
@@ -93,7 +101,7 @@ fn get_winnings(hands: Vec<Hand>) -> usize {
     let num_hands = sorted_hands.len();
     let mut sum = 0;
     for i in 0..num_hands {
-        sum += sorted_hands[i].bid * (num_hands - i)
+        sum += sorted_hands[i].bid * (i + 1)
     }
     sum
 }
