@@ -23,99 +23,42 @@ impl Ord for Hand {
     }
 }
 
-// full house or four of a kind
-fn check_hashset_two(cards: &Vec<u32>, set: &HashSet<u32>) -> usize {
-    let vec_set = set.into_iter().map(|n| *n).collect::<Vec<u32>>();
-    match cards.iter().filter(|&n| *n == vec_set[0]).count() {
-        1 | 4 => return 5,
-        2 | 3 => return 4,
-        _ => panic!("check_hashset_2 does not match"),
-    }
-}
-
-// two pair, three of a kind
-fn check_hashset_three(cards: &Vec<u32>, vec_set: &Vec<u32>) -> usize {
-    if vec_set.len() == 0 {
-        return 2;
-    }
-    match cards.iter().filter(|&n| *n == vec_set[0]).count() {
-        3 => return 3,
-        1 | 2 => {
-            return check_hashset_three(
-                cards,
-                &vec_set.iter().skip(1).map(|n| *n).collect::<Vec<u32>>(),
-            )
-        }
-        _ => panic!("check_hashset_2 does not match"),
-    }
-}
-
 fn get_type_of_cards(cards: &Vec<u32>) -> usize {
     let set: HashSet<u32> = HashSet::from_iter(cards.clone());
-    match set.len() {
-        1 => return 6,
-        2 => return check_hashset_two(cards, &set),
-        3 => return check_hashset_three(cards, &set.into_iter().collect::<Vec<u32>>()),
-        4 => return 1,
-        5 => return 0,
+    let vec_set: Vec<u32> = set.into_iter().collect();
+    let occurences = vec_set
+        .iter()
+        .map(|set_number| cards.iter().filter(|&n| n == set_number).count())
+        .collect::<Vec<usize>>();
+    let max_occurences = *occurences.iter().max().unwrap();
+    match vec_set.len() {
+        1 | 2 => return max_occurences + 1,
+        3 => return max_occurences,
+        4 | 5 => return max_occurences - 1,
         _ => panic!("HashSet length does not match"),
     }
 }
 
 // 0 == high_card, 1 == one pair, 2 == two pair, 3 == three of a kind, 4 == full house, 5 == four of a kind, 6 == five of a kind
-fn optimize_hand_type_with_one_joker(hand: &Hand) -> usize{
-    match hand.hand_type {
-        0 => return 1,
-        1 => return 3,
-        2 => return 4,
-        3 => return 5,
-        5 => return 6,
-        _ => panic!("One joker does not match")
-    }
-}
-
-// 0 == high_card, 1 == one pair, 2 == two pair, 3 == three of a kind, 4 == full house, 5 == four of a kind, 6 == five of a kind
-fn optimize_hand_type_with_two_joker(hand: &Hand) -> usize{
-    match hand.hand_type {
-        1 => return 3,
-        2 => return 5,
-        4 => return 6,
-        _ => panic!("Two jokers do not match")
-    }
-}
-
-// 0 == high_card, 1 == one pair, 2 == two pair, 3 == three of a kind, 4 == full house, 5 == four of a kind, 6 == five of a kind
-fn optimize_hand_type_with_three_joker(hand: &Hand) -> usize{
-    match hand.hand_type {
-        3 => return 5,
-        4 => return 6,
-        _ => panic!("Three jokers do not match")
+fn optimize_hand_type_with_jokers(hand: &Hand, jokers: usize) -> usize {
+    match (hand.hand_type, jokers) {
+        (_, 0) | (_, 5) => return hand.hand_type,
+        (0, 1) => return 1,
+        (1, 1) | (0, 2) | (1, 2) => return 3,
+        (2, 1) => return 4,
+        (3, 1) | (2, 2) => return 5,
+        (5, 1) | (4, 2) => return 6,
+        (_, 3) => return hand.hand_type + 2,
+        (_, 4) => return 6,
+        (_, _) => panic!("Optimize does not match ({},{jokers})", hand.hand_type),
     }
 }
 
 fn optimize_hand(hand: Hand) -> Hand {
-    let num_jokers = hand.cards.iter().filter(|&n| *n == 0).count();
+    let jokers = hand.cards.iter().filter(|&n| *n == 0).count();
     let mut optimized_hand = hand;
-    match num_jokers {
-        0 | 5 => return optimized_hand,
-        1 => {
-            optimized_hand.hand_type = optimize_hand_type_with_one_joker(&optimized_hand);
-            return optimized_hand;
-        },
-        2 => {
-            optimized_hand.hand_type = optimize_hand_type_with_two_joker(&optimized_hand);
-            return optimized_hand;
-        }
-        3 => {
-            optimized_hand.hand_type = optimize_hand_type_with_three_joker(&optimized_hand);
-            return optimized_hand;
-        }
-        4 => {
-            optimized_hand.hand_type = 6;
-            return optimized_hand;
-        }
-        _ => panic!("Too many jokers"),
-    }
+    optimized_hand.hand_type = optimize_hand_type_with_jokers(&optimized_hand, jokers);
+    optimized_hand
 }
 
 fn sort_hands(hands: Vec<Hand>) -> Vec<Hand> {
@@ -135,30 +78,18 @@ fn parse_hands(input: &Vec<String>, part_two: bool) -> Vec<Hand> {
             let cards = split[0]
                 .chars()
                 .map(|char| match char {
-                    'A' => 14,
-                    'K' => 13,
-                    'Q' => 12,
+                    'A' => 15,
+                    'K' => 14,
+                    'Q' => 13,
                     'J' => {
                         if part_two {
                             return 0;
                         } else {
-                            return 11;
+                            return 12;
                         }
                     }
-                    'T' => {
-                        if part_two {
-                            return 11;
-                        } else {
-                            return 10;
-                        }
-                    }
-                    number => {
-                        if part_two {
-                            return number.to_digit(10).unwrap() + 1;
-                        } else {
-                            return number.to_digit(10).unwrap();
-                        }
-                    }
+                    'T' => 11,
+                    number => number.to_digit(10).unwrap() + 1,
                 })
                 .collect::<Vec<u32>>();
             Hand {
@@ -171,23 +102,19 @@ fn parse_hands(input: &Vec<String>, part_two: bool) -> Vec<Hand> {
         .collect()
 }
 
-fn solve_part_one(input: &Vec<String>) -> usize {
-    let hands: Vec<Hand> = parse_hands(input, false);
+fn get_winnings(hands: Vec<Hand>) -> usize {
     let sorted_hands = sort_hands(hands);
     let num_hands = sorted_hands.len();
     let mut sum = 0;
     for i in 0..num_hands {
-        // println!(
-        //     "{i}: {} type: {}, bid: {}, value: {}, rank: {}",
-        //     sorted_hands[i].line,
-        //     sorted_hands[i].hand_type,
-        //     sorted_hands[i].bid,
-        //     sorted_hands[i].bid * (num_hands - i),
-        //     num_hands - i
-        // );
         sum += sorted_hands[i].bid * (num_hands - i)
     }
     sum
+}
+
+fn solve_part_one(input: &Vec<String>) -> usize {
+    let hands: Vec<Hand> = parse_hands(input, false);
+    get_winnings(hands)
 }
 
 fn solve_part_two(input: &Vec<String>) -> usize {
@@ -196,21 +123,7 @@ fn solve_part_two(input: &Vec<String>) -> usize {
         .iter()
         .map(|hand| optimize_hand(hand.clone()))
         .collect::<Vec<Hand>>();
-    let sorted_hands = sort_hands(optimized_hands);
-    let num_hands = sorted_hands.len();
-    let mut sum = 0;
-    for i in 0..num_hands {
-        // println!(
-        //     "{i}: {} type: {}, bid: {}, value: {}, rank: {}",
-        //     sorted_hands[i].line,
-        //     sorted_hands[i].hand_type,
-        //     sorted_hands[i].bid,
-        //     sorted_hands[i].bid * (num_hands - i),
-        //     num_hands - i
-        // );
-        sum += sorted_hands[i].bid * (num_hands - i)
-    }
-    sum
+    get_winnings(optimized_hands)
 }
 
 fn get_input(file: &str) -> Vec<String> {
@@ -235,6 +148,7 @@ pub fn solver() {
 mod tests {
     use super::*;
     use test::Bencher;
+
     #[test]
     fn day7_example_input_part_one() {
         let input = get_input("./src/day7/example_input.txt");
