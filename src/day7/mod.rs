@@ -72,18 +72,18 @@ fn parse_hands(input: &Vec<String>, part_two: bool) -> Vec<Hand> {
             let cards = split[0]
                 .chars()
                 .map(|char| match char {
-                    'A' => 15,
-                    'K' => 14,
-                    'Q' => 13,
+                    'A' => 14,
+                    'K' => 13,
+                    'Q' => 12,
                     'J' => {
                         if part_two {
                             return 0;
                         } else {
-                            return 12;
+                            return 11;
                         }
                     }
-                    'T' => 11,
-                    number => number.to_digit(10).unwrap() + 1,
+                    'T' => 10,
+                    number => number.to_digit(10).unwrap(),
                 })
                 .collect::<Vec<u32>>();
             Hand {
