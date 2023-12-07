@@ -1,5 +1,4 @@
 use std::{cmp::min, fs};
-use test::Bencher;
 
 fn get_seed_and_maps(groups: &Vec<String>) -> (Vec<u128>, Vec<Vec<[u128; 3]>>) {
     let seeds: Vec<u128> = groups
@@ -103,6 +102,7 @@ pub fn solver() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test::Bencher;
 
     #[test]
     fn day5_example_input_part_one() {
