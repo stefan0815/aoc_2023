@@ -31,7 +31,9 @@ fn find_end(line: &Vec<char>, index: usize) -> usize {
 fn find_part(line: &Vec<char>, row: usize, col: usize) -> Part {
     let start = find_start(&line, col);
     let end = find_end(&line, col);
-    let value = String::from_iter(line[start..end].iter()).parse::<u32>().unwrap();
+    let value = String::from_iter(line[start..end].iter())
+        .parse::<u32>()
+        .unwrap();
     Part {
         number: value,
         start: (row, start),
