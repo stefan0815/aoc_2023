@@ -36,9 +36,9 @@ fn find_part(line: &Vec<char>, row: usize, col: usize) -> Part {
 
 fn find_parts_around(schematic: &Vec<Vec<char>>, (y, x): (usize, usize)) -> HashSet<Part> {
     let mut parts: HashSet<Part> = HashSet::new();
-    let row_range = (max(1, y) - 1)..(min(y, schematic.len() - 1) + 2);
+    let row_range = (max(0, y - 1))..(min(y + 2, schematic.len()));
     for row in row_range {
-        let col_range = (max(1, x) - 1)..(min(x, schematic[row].len() - 1) + 2);
+        let col_range = (max(0, x - 1))..(min(x + 2, schematic[row].len()));
         for col in col_range {
             if schematic[row][col].is_numeric() {
                 parts.insert(find_part(&schematic[row], row, col));
