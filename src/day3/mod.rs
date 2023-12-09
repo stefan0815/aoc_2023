@@ -4,14 +4,14 @@ use std::{
     fs,
 };
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash)]
 struct Part {
     number: u32,
     start: (usize, usize),
 }
 
 fn find_start(line: &Vec<char>, index: usize) -> usize {
-    for i in (0..(index + 1)).rev() {
+    for i in (0..index).rev() {
         if !line[i].is_numeric() {
             return i + 1;
         }
