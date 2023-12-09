@@ -19,17 +19,21 @@ fn find_start(line: &Vec<char>, index: usize) -> usize {
     return 0;
 }
 
+fn find_end(line: &Vec<char>, index: usize) -> usize {
+    for i in index..line.len() {
+        if !line[i].is_numeric() {
+            return i;
+        }
+    }
+    return line.len();
+}
+
 fn find_part(line: &Vec<char>, row: usize, col: usize) -> Part {
     let start = find_start(&line, col);
-    let mut number_string: String = String::new();
-    for i in start..line.len() {
-        if !line[i].is_numeric() {
-            break;
-        }
-        number_string.push(line[i]);
-    }
+    let end = find_end(&line, col);
+    let value = String::from_iter(line[start..end].iter()).parse::<u32>().unwrap();
     Part {
-        number: number_string.parse::<u32>().unwrap(),
+        number: value,
         start: (row, start),
     }
 }
