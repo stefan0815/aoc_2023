@@ -1,15 +1,13 @@
 use std::{collections::HashSet, fs};
 
-
-fn get_differences(sequence: &Vec<i128>) -> Vec<i128>{
-    let mut differences :Vec<i128> = Vec::new();
-    for i in 1..sequence.len(){
-        differences.push(sequence[i] - sequence[i-1])
-    }
-    differences
+fn get_differences(sequence: &Vec<i128>) -> Vec<i128> {
+    sequence
+        .windows(2)
+        .map(|window| window.last().unwrap() - window.first().unwrap())
+        .collect()
 }
 
-fn find_next_value(sequence: &Vec<i128>) -> i128{
+fn find_next_value(sequence: &Vec<i128>) -> i128 {
     let sequence_set: HashSet<i128> = HashSet::from_iter(sequence.iter().cloned());
     if sequence_set.len() == 1 {
         return *sequence.first().unwrap();
@@ -18,17 +16,8 @@ fn find_next_value(sequence: &Vec<i128>) -> i128{
     return next_value;
 }
 
-fn find_previous_value(sequence: &Vec<i128>) -> i128{
-    let sequence_set: HashSet<i128> = HashSet::from_iter(sequence.iter().cloned());
-    if sequence_set.len() == 1 {
-        return *sequence.first().unwrap();
-    }
-    let previous_value = sequence.first().unwrap() - find_previous_value(&get_differences(sequence));
-    return previous_value;
-}
-
-fn solve_part_one(input: &Vec<String>) -> i128 {
-    let sequences: Vec<Vec<i128>> = input
+fn parse_sequences(input: &Vec<String>) -> Vec<Vec<i128>> {
+    input
         .iter()
         .map(|line| {
             line.split_whitespace()
@@ -36,21 +25,25 @@ fn solve_part_one(input: &Vec<String>) -> i128 {
                 .map(|string| string.parse::<i128>().unwrap())
                 .collect::<Vec<i128>>()
         })
-        .collect();
-    sequences.iter().map(|sequence| find_next_value(sequence)).sum()
+        .collect()
+}
+
+fn solve_part_one(input: &Vec<String>) -> i128 {
+    let sequences = parse_sequences(input);
+    sequences
+        .iter()
+        .map(|sequence| find_next_value(sequence))
+        .sum()
 }
 
 fn solve_part_two(input: &Vec<String>) -> i128 {
-    let sequences: Vec<Vec<i128>> = input
-    .iter()
-    .map(|line| {
-        line.split_whitespace()
-            .into_iter()
-            .map(|string| string.parse::<i128>().unwrap())
-            .collect::<Vec<i128>>()
-    })
-    .collect();
-    sequences.iter().map(|sequence| find_previous_value(sequence)).sum()
+    let sequences = parse_sequences(input);
+    sequences
+        .iter()
+        .map(|sequence| {
+            find_next_value(&sequence.into_iter().rev().cloned().collect::<Vec<i128>>())
+        })
+        .sum()
 }
 
 fn get_input(file: &str) -> Vec<String> {
