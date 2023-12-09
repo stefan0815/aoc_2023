@@ -42,7 +42,11 @@ fn parse_sequences(input: &Vec<String>) -> Vec<Vec<i128>> {
         .collect()
 }
 
-fn solve(input: &Vec<String>, next_value: fn(&Vec<i128>) -> i128, sequence_func: fn(&mut Vec<i128>)) -> i128 {
+fn solve(
+    input: &Vec<String>,
+    next_value: fn(&Vec<i128>) -> i128,
+    sequence_func: fn(&mut Vec<i128>),
+) -> i128 {
     let sequences = parse_sequences(input);
     sequences
         .iter()
@@ -75,7 +79,6 @@ pub fn solver() {
     let part_two_iterative = solve(&input, find_next_value_iterative, |s| s.reverse());
     println!("Part 1 iterative: {part_one_iterative}");
     println!("Part 2 iterative: {part_two_iterative}");
-
 }
 
 #[cfg(test)]
@@ -124,7 +127,6 @@ mod tests {
         let sum_part_two = solve(&input, find_next_value_iterative, |s| s.reverse());
         assert_eq!(1104, sum_part_two);
     }
-
 
     #[bench]
     fn bench_part_one(b: &mut Bencher) {
