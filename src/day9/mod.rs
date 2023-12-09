@@ -16,6 +16,20 @@ fn find_next_value(sequence: &Vec<i128>) -> i128 {
     return next_value;
 }
 
+fn find_next_value_iterative(sequence: &Vec<i128>) -> i128 {
+    let mut current_sequence = sequence.clone();
+    let mut next_values: Vec<i128> = vec![];
+    loop {
+        next_values.push(*current_sequence.last().unwrap());
+        let sequence_set: HashSet<i128> = HashSet::from_iter(current_sequence.iter().cloned());
+        if sequence_set.len() == 1 {
+            break;
+        }
+        current_sequence = get_differences(&current_sequence);
+    }
+    return next_values.iter().sum();
+}
+
 fn parse_sequences(input: &Vec<String>) -> Vec<Vec<i128>> {
     input
         .iter()
@@ -28,20 +42,14 @@ fn parse_sequences(input: &Vec<String>) -> Vec<Vec<i128>> {
         .collect()
 }
 
-fn solve_part_one(input: &Vec<String>) -> i128 {
-    let sequences = parse_sequences(input);
-    sequences
-        .iter()
-        .map(|sequence| find_next_value(sequence))
-        .sum()
-}
-
-fn solve_part_two(input: &Vec<String>) -> i128 {
+fn solve(input: &Vec<String>, next_value: fn(&Vec<i128>) -> i128, sequence_func: fn(&mut Vec<i128>)) -> i128 {
     let sequences = parse_sequences(input);
     sequences
         .iter()
         .map(|sequence| {
-            find_next_value(&sequence.into_iter().rev().cloned().collect::<Vec<i128>>())
+            let mut seq = sequence.clone();
+            sequence_func(&mut seq);
+            next_value(&seq)
         })
         .sum()
 }
@@ -58,10 +66,16 @@ fn get_input(file: &str) -> Vec<String> {
 
 pub fn solver() {
     let input = get_input("./src/day9/input.txt");
-    let sum_part_one = solve_part_one(&input);
-    println!("Part 1: {sum_part_one}");
-    let sum_part_two = solve_part_two(&input);
-    println!("Part 2: {sum_part_two}");
+    let part_one = solve(&input, find_next_value, |_| {});
+    let part_two = solve(&input, find_next_value, |s| s.reverse());
+    println!("Part 1: {part_one}");
+    println!("Part 2: {part_two}");
+
+    let part_one_iterative = solve(&input, find_next_value_iterative, |_| {});
+    let part_two_iterative = solve(&input, find_next_value_iterative, |s| s.reverse());
+    println!("Part 1 iterative: {part_one_iterative}");
+    println!("Part 2 iterative: {part_two_iterative}");
+
 }
 
 #[cfg(test)]
@@ -72,40 +86,67 @@ mod tests {
     #[test]
     fn day9_example_input_part_one() {
         let input = get_input("./src/day9/example_input.txt");
-        let sum_part_one = solve_part_one(&input);
+        let sum_part_one = solve(&input, find_next_value, |_| {});
         assert_eq!(114, sum_part_one);
     }
 
     #[test]
     fn day9_input_part_one() {
         let input = get_input("./src/day9/input.txt");
-        let sum_part_one = solve_part_one(&input);
+        let sum_part_one = solve(&input, find_next_value, |_| {});
+        assert_eq!(1798691765, sum_part_one);
+    }
+
+    #[test]
+    fn day9_input_part_one_iterative() {
+        let input = get_input("./src/day9/input.txt");
+        let sum_part_one = solve(&input, find_next_value_iterative, |_| {});
         assert_eq!(1798691765, sum_part_one);
     }
 
     #[test]
     fn day9_example_input_part_two() {
         let input = get_input("./src/day9/example_input.txt");
-        let sum_part_two = solve_part_two(&input);
+        let sum_part_two = solve(&input, find_next_value, |s| s.reverse());
         assert_eq!(2, sum_part_two);
     }
 
     #[test]
     fn day9_input_part_two() {
         let input = get_input("./src/day9/input.txt");
-        let sum_part_two = solve_part_two(&input);
+        let sum_part_two = solve(&input, find_next_value, |s| s.reverse());
         assert_eq!(1104, sum_part_two);
     }
+
+    #[test]
+    fn day9_input_part_two_iterative() {
+        let input = get_input("./src/day9/input.txt");
+        let sum_part_two = solve(&input, find_next_value_iterative, |s| s.reverse());
+        assert_eq!(1104, sum_part_two);
+    }
+
 
     #[bench]
     fn bench_part_one(b: &mut Bencher) {
         let input = get_input("./src/day9/input.txt");
-        b.iter(|| solve_part_one(&input))
+        b.iter(|| solve(&input, find_next_value, |_| {}))
     }
 
     #[bench]
     fn bench_part_two(b: &mut Bencher) {
         let input = get_input("./src/day9/input.txt");
-        b.iter(|| solve_part_two(&input))
+        b.iter(|| solve(&input, find_next_value, |s| s.reverse()))
+    }
+
+    #[bench]
+    fn bench_part_one_iterative(b: &mut Bencher) {
+        let input = get_input("./src/day9/input.txt");
+        b.iter(|| solve(&input, find_next_value_iterative, |s| s.reverse()))
+    }
+
+    #[bench]
+    fn bench_part_two_iterative(b: &mut Bencher) {
+        let input = get_input("./src/day9/input.txt");
+        b.iter(|| solve(&input, find_next_value_iterative, |_| {}))
     }
 }
