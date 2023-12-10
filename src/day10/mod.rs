@@ -1,7 +1,4 @@
-use std::{
-    cmp::{max, min},
-    fs,
-};
+use std::fs;
 
 fn find_start(map: &Vec<Vec<char>>) -> (usize, usize) {
     for row in 0..map.len() {
@@ -105,50 +102,63 @@ fn find_loop(map: &Vec<Vec<char>>, start: &(usize, usize)) -> (Vec<(usize, usize
     (pipe_loop, steps)
 }
 
-fn get_bounding_box(pipe_loop: &Vec<(usize, usize)>) -> [(usize, usize); 2] {
-    let mut bounding_box = [(usize::MAX, usize::MAX), (0, 0)];
-    for position in pipe_loop {
-        bounding_box[0] = (
-            min(bounding_box[0].0, position.0),
-            min(bounding_box[0].1, position.1),
-        );
-        bounding_box[1] = (
-            max(bounding_box[1].0, position.0),
-            max(bounding_box[1].1, position.1),
-        );
-    }
-    bounding_box
-}
-
-fn is_connected(
-    pipe_loop: &Vec<(usize, usize)>,
-    cur_pos: (usize, usize),
-    other_pos: (usize, usize),
-) -> bool {
-    if cur_pos == other_pos {
-        return false;
-    }
-    for i in 0..pipe_loop.len() {
-        if pipe_loop[i] == cur_pos {
-            return pipe_loop[(i + pipe_loop.len() - 1) % pipe_loop.len()] == other_pos
-                || pipe_loop[(i + 1) % pipe_loop.len()] == other_pos;
-        }
-    }
-    false
-}
-
-fn count_enclosed_spaces(input_map: &Vec<Vec<char>>, pipe_loop: &Vec<(usize, usize)>) -> usize {
-    let mut map = input_map.clone();
-    for row in 0..map.len() {
-        for col in 0..map[row].len() {
-            if map[row][col] == '.'{
+fn clean_map(input_map: &Vec<Vec<char>>, pipe_loop: &Vec<(usize, usize)>) -> Vec<Vec<char>> {
+    let mut cleaned_map = input_map.clone();
+    for row in 0..cleaned_map.len() {
+        for col in 0..cleaned_map[row].len() {
+            if cleaned_map[row][col] == '.' {
                 continue;
             }
-            if !pipe_loop.contains(&(row,col)){
-                map[row][col] = '.'
+            if !pipe_loop.contains(&(row, col)) {
+                cleaned_map[row][col] = '.'
             }
         }
     }
+
+    let start_direction_one = (
+        pipe_loop[1].0 as i128 - pipe_loop[0].0 as i128,
+        pipe_loop[1].1 as i128 - pipe_loop[0].1 as i128,
+    );
+    let start_direction_two = (
+        pipe_loop[pipe_loop.len() - 1].0 as i128 - pipe_loop[0].0 as i128,
+        pipe_loop[pipe_loop.len() - 1].1 as i128 - pipe_loop[0].1 as i128,
+    );
+
+    let start_symbol: char;
+    match start_direction_one {
+        (1, 0) => match start_direction_two {
+            (-1, 0) => start_symbol = '|',
+            (0, 1) => start_symbol = 'F',
+            (0, -1) => start_symbol = '7',
+            _ => panic!("Wrong connection start two"),
+        },
+        (-1, 0) => match start_direction_two {
+            (1, 0) => start_symbol = '|',
+            (0, 1) => start_symbol = 'L',
+            (0, -1) => start_symbol = 'J',
+            _ => panic!("Wrong connection start two"),
+        },
+        (0, 1) => match start_direction_two {
+            (-1, 0) => start_symbol = 'L',
+            (1, 0) => start_symbol = 'F',
+            (0, -1) => start_symbol = '-',
+            _ => panic!("Wrong connection start two"),
+        },
+        (0, -1) => match start_direction_two {
+            (-1, 0) => start_symbol = 'J',
+            (1, 0) => start_symbol = '7',
+            (0, 1) => start_symbol = '-',
+            _ => panic!("Wrong connection start two"),
+        },
+        _ => panic!("Wrong connection start one"),
+    }
+
+    cleaned_map[pipe_loop[0].0][pipe_loop[0].1] = start_symbol;
+    cleaned_map
+}
+
+fn count_enclosed_spaces(input_map: &Vec<Vec<char>>) -> usize {
+    let mut map = input_map.clone();
     for row in 0..map.len() {
         let mut is_inside = false;
         let mut last_wall = ' ';
@@ -173,27 +183,13 @@ fn count_enclosed_spaces(input_map: &Vec<Vec<char>>, pipe_loop: &Vec<(usize, usi
                     last_wall = ' '
                 }
                 ('J', _) => last_wall = ' ',
-                (_, _) => (),
+                ('-', _) => (),
+                (_, _) => panic!("weird layout {} {}", map[row][col], last_wall),
             }
-
-            // let is_wall = !is_connected(pipe_loop, (row, col), last_ray_position);
-            // if row == 7{
-            //     println!("col: {col}, is_wall {is_wall}, pos: {:?}, last_ray_position: {:?}", (row,col), last_ray_position);
-            // }
-            // let is_wall = !is_connected(pipe_loop, (row,col), last_ray_position);
-            // if map[row][col] == '|' || map[row][col] == 'L' || map[row][col] == 'F' {
-            //     is_inside = !is_inside;
-            // }
-            // last_ray_position = (row, col);
         }
-        println!("{:?}", map[row]);
+        // println!("{:?}", map[row]);
     }
 
-    // for row in 0..map.len() {
-    //     for col in 0..map[row].len(){
-
-    //     }
-    // }
     map.iter()
         .map(|row| {
             row.iter()
@@ -212,8 +208,8 @@ fn solve_part_one(map: &Vec<Vec<char>>) -> usize {
 fn solve_part_two(map: &Vec<Vec<char>>) -> usize {
     let start = find_start(map);
     let pipe_loop = find_loop(map, &start).0;
-    // let bounding_box = get_bounding_box(&pipe_loop);
-    count_enclosed_spaces(map, &pipe_loop)
+    let cleaned_map = clean_map(map, &pipe_loop);
+    count_enclosed_spaces(&cleaned_map)
 }
 
 fn get_input(file: &str) -> Vec<Vec<char>> {
@@ -271,6 +267,13 @@ mod tests {
     fn day10_example_input_two_part_two() {
         let input = get_input("./src/day10/example_input_two_part_two.txt");
         let sum_part_two = solve_part_two(&input);
+        assert_eq!(8, sum_part_two);
+    }
+
+    #[test]
+    fn day10_example_input_three_part_two() {
+        let input = get_input("./src/day10/example_input_three_part_two.txt");
+        let sum_part_two = solve_part_two(&input);
         assert_eq!(10, sum_part_two);
     }
 
@@ -278,7 +281,7 @@ mod tests {
     fn day10_input_part_two() {
         let input = get_input("./src/day10/input.txt");
         let sum_part_two = solve_part_two(&input);
-        assert_eq!(9858474970153, sum_part_two);
+        assert_eq!(459, sum_part_two);
     }
 
     #[bench]
