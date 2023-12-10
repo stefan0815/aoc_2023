@@ -120,37 +120,19 @@ fn clean_map(input_map: &Vec<Vec<char>>, pipe_loop: &Vec<(usize, usize)>) -> Vec
         pipe_loop[1].1 as i128 - pipe_loop[0].1 as i128,
     );
     let start_direction_two = (
-        pipe_loop[pipe_loop.len() - 1].0 as i128 - pipe_loop[0].0 as i128,
-        pipe_loop[pipe_loop.len() - 1].1 as i128 - pipe_loop[0].1 as i128,
+        pipe_loop.last().unwrap().0 as i128 - pipe_loop[0].0 as i128,
+        pipe_loop.last().unwrap().1 as i128 - pipe_loop[0].1 as i128,
     );
 
     let start_symbol: char;
-    match start_direction_one {
-        (1, 0) => match start_direction_two {
-            (-1, 0) => start_symbol = '|',
-            (0, 1) => start_symbol = 'F',
-            (0, -1) => start_symbol = '7',
-            _ => panic!("Wrong connection start two"),
-        },
-        (-1, 0) => match start_direction_two {
-            (1, 0) => start_symbol = '|',
-            (0, 1) => start_symbol = 'L',
-            (0, -1) => start_symbol = 'J',
-            _ => panic!("Wrong connection start two"),
-        },
-        (0, 1) => match start_direction_two {
-            (-1, 0) => start_symbol = 'L',
-            (1, 0) => start_symbol = 'F',
-            (0, -1) => start_symbol = '-',
-            _ => panic!("Wrong connection start two"),
-        },
-        (0, -1) => match start_direction_two {
-            (-1, 0) => start_symbol = 'J',
-            (1, 0) => start_symbol = '7',
-            (0, 1) => start_symbol = '-',
-            _ => panic!("Wrong connection start two"),
-        },
-        _ => panic!("Wrong connection start one"),
+    match (start_direction_one, start_direction_two) {
+        ((_, 0), (_, 0)) => start_symbol = '|',
+        ((0, _), (0, _)) => start_symbol = '-',
+        ((0, 1), (-1, 0)) | ((-1, 0), (0, 1)) => start_symbol = 'L',
+        ((0, -1), (-1, 0)) | ((-1, 0), (0, -1)) => start_symbol = 'J',
+        ((0, -1), (1, 0)) | ((1, 0), (0, -1)) => start_symbol = '7',
+        ((0, 1), (1, 0)) | ((1, 0), (0, 1)) => start_symbol = 'F',
+        _ => panic!("Start block does not really connect"),
     }
 
     cleaned_map[pipe_loop[0].0][pipe_loop[0].1] = start_symbol;
@@ -169,22 +151,16 @@ fn count_enclosed_spaces(input_map: &Vec<Vec<char>>) -> usize {
                 }
                 continue;
             }
-            match (map[row][col], last_wall) {
-                ('|', _) => is_inside = !is_inside,
-                ('L', _) => last_wall = 'L',
-                ('F', _) => last_wall = 'F',
-                ('7', 'L') => {
+            match (last_wall, map[row][col]) {
+                (_, '|') => is_inside = !is_inside,
+                (_, 'L') | (_, 'F') => last_wall = map[row][col],
+                ('L', '7') | ('F', 'J')=> {
                     is_inside = !is_inside;
                     last_wall = ' '
                 }
-                ('7', _) => last_wall = ' ',
-                ('J', 'F') => {
-                    is_inside = !is_inside;
-                    last_wall = ' '
-                }
-                ('J', _) => last_wall = ' ',
-                ('-', _) => (),
-                (_, _) => panic!("weird layout {} {}", map[row][col], last_wall),
+                ('L', 'J') | ('F', '7') => last_wall = ' ',
+                (_, '-') => (),
+                (_, _) => panic!("weird layout {} {}", last_wall, map[row][col]),
             }
         }
         // println!("{:?}", map[row]);
