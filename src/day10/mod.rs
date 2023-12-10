@@ -73,16 +73,16 @@ fn find_loop(map: &Vec<Vec<char>>, start: &(usize, usize)) -> (Vec<(usize, usize
         }
         for i in 0..2 {
             let last_position = last_positions[i].last().unwrap();
-            let possible_next_positions = find_connecting_positions(
+            let next_position = **find_connecting_positions(
                 map[current_positions[i].0][current_positions[i].1],
                 current_positions[i],
-            );
-            let next_position = **possible_next_positions
-                .iter()
-                .filter(|position| *position != last_position)
-                .collect::<Vec<&(usize, usize)>>()
-                .first()
-                .unwrap();
+            )
+            .iter()
+            .filter(|position| *position != last_position)
+            .collect::<Vec<&(usize, usize)>>()
+            .first()
+            .unwrap();
+
             last_positions[i].push(current_positions[i]);
             current_positions[i] = next_position;
         }
@@ -154,7 +154,7 @@ fn count_enclosed_spaces(input_map: &Vec<Vec<char>>) -> usize {
             match (last_wall, map[row][col]) {
                 (_, '|') => is_inside = !is_inside,
                 (_, 'L') | (_, 'F') => last_wall = map[row][col],
-                ('L', '7') | ('F', 'J')=> {
+                ('L', '7') | ('F', 'J') => {
                     is_inside = !is_inside;
                     last_wall = ' '
                 }
