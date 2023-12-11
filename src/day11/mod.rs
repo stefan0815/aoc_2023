@@ -97,12 +97,12 @@ fn solve(universe: &Vec<Vec<char>>, factor: i128) -> usize {
 
 fn get_input(file: &str) -> Vec<Vec<char>> {
     let input = fs::read_to_string(file).expect("Should have been able to read the file");
-    let groups: Vec<Vec<char>> = input
+    let symbols: Vec<Vec<char>> = input
         .split("\r\n")
         .into_iter()
         .map(|s| s.to_owned().chars().collect::<Vec<char>>())
         .collect();
-    return groups;
+    return symbols;
 }
 
 pub fn solver() {
