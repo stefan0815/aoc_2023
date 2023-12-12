@@ -5,7 +5,11 @@ use std::{
     sync::Mutex,
 };
 
-fn get_num_valid_arrangements(springs: &[char], groups: &[usize]) -> usize {
+fn get_num_valid_arrangements(
+    springs: &[char],
+    groups: &[usize],
+    possible_failures: usize,
+) -> usize {
     if springs.is_empty() {
         if groups.is_empty() {
             return 1;
@@ -13,11 +17,20 @@ fn get_num_valid_arrangements(springs: &[char], groups: &[usize]) -> usize {
         return 0;
     }
 
+    let necessary_failures:usize = groups.iter().sum::<usize>();
+    if possible_failures < necessary_failures {
+        return 0;
+    }
+
     match springs[0] {
-        '.' => return get_num_valid_arrangements(&springs[1..], &groups),
+        '.' => return get_num_valid_arrangements(&springs[1..], &groups, possible_failures),
         '?' => {
-            return get_num_valid_arrangements(&springs[1..], &groups)
-                + get_num_valid_arrangements(&[['#'].as_slice(), &springs[1..]].concat(), &groups)
+            return get_num_valid_arrangements(&springs[1..], &groups, possible_failures - 1)
+                + get_num_valid_arrangements(
+                    &[['#'].as_slice(), &springs[1..]].concat(),
+                    &groups,
+                    possible_failures,
+                )
         }
         '#' => {
             if groups.is_empty() {
@@ -32,10 +45,18 @@ fn get_num_valid_arrangements(springs: &[char], groups: &[usize]) -> usize {
                 if springs[groups[0]] == '#' {
                     return 0;
                 }
-                return get_num_valid_arrangements(&springs[(groups[0] + 1)..], &groups[1..]);
+                let mut new_possible_failures = possible_failures;
+                if springs[groups[0]] == '?' {
+                    new_possible_failures -= 1;
+                }
+                return get_num_valid_arrangements(
+                    &springs[(groups[0] + 1)..],
+                    &groups[1..],
+                    new_possible_failures,
+                );
             }
 
-            return get_num_valid_arrangements(&springs[groups[0]..], &groups[1..]);
+            return get_num_valid_arrangements(&springs[groups[0]..], &groups[1..], 0);
         }
         _ => panic!("Illegal symbol"),
     }
@@ -51,7 +72,8 @@ fn solve_part_one(input: &Vec<String>) -> usize {
                 .split(',')
                 .map(|s| s.parse::<usize>().unwrap())
                 .collect();
-            get_num_valid_arrangements(&springs, &groups)
+            let possible_failures = springs.iter().filter(|spring| **spring != '.').count();
+            get_num_valid_arrangements(&springs, &groups, possible_failures)
         })
         .sum()
 }
@@ -111,8 +133,12 @@ fn solve_part_two(input: &Vec<String>, file_path: &str) -> usize {
             adapted_groups.extend(groups.to_vec());
             adapted_groups.extend(groups.to_vec());
 
+            let possible_failures = adapted_springs
+                .iter()
+                .filter(|spring| **spring != '.')
+                .count();
             let num_valid_arrangements =
-                get_num_valid_arrangements(&adapted_springs, &adapted_groups);
+                get_num_valid_arrangements(&adapted_springs, &adapted_groups, possible_failures);
             let output = format!("{:?}|{:?}|{num_valid_arrangements}\n", springs, groups);
             file.lock().unwrap().write_all(output.as_bytes()).unwrap();
             num_valid_arrangements
