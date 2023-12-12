@@ -5,7 +5,7 @@ use std::{
     sync::Mutex,
 };
 
-fn get_num_valid_arrangements(springs: &Vec<char>, groups: &Vec<usize>) -> usize {
+fn get_num_valid_arrangements(springs: &[char], groups: &[usize]) -> usize {
     if springs.is_empty() {
         if groups.is_empty() {
             return 1;
@@ -14,10 +14,10 @@ fn get_num_valid_arrangements(springs: &Vec<char>, groups: &Vec<usize>) -> usize
     }
 
     match springs[0] {
-        '.' => return get_num_valid_arrangements(&springs[1..].to_owned(), &groups),
+        '.' => return get_num_valid_arrangements(&springs[1..], &groups),
         '?' => {
-            return get_num_valid_arrangements(&springs[1..].to_owned(), &groups)
-                + get_num_valid_arrangements(&[&['#'], &springs[1..]].concat(), &groups)
+            return get_num_valid_arrangements(&springs[1..], &groups)
+                + get_num_valid_arrangements(&[['#'].as_slice(), &springs[1..]].concat(), &groups)
         }
         '#' => {
             if groups.is_empty() {
@@ -28,20 +28,19 @@ fn get_num_valid_arrangements(springs: &Vec<char>, groups: &Vec<usize>) -> usize
                 return 0;
             }
 
-            if springs.len() > groups[0] && springs[groups[0]] == '#' {
-                return 0;
-            }
-
             if springs.len() > groups[0] {
+                if springs[groups[0]] == '#'{
+                    return 0;
+                }
                 return get_num_valid_arrangements(
-                    &springs[(groups[0] + 1)..].to_owned(),
-                    &groups[1..].to_owned(),
+                    &springs[(groups[0] + 1)..],
+                    &groups[1..],
                 );
             }
 
             return get_num_valid_arrangements(
-                &springs[groups[0]..].to_owned(),
-                &groups[1..].to_owned(),
+                &springs[groups[0]..],
+                &groups[1..],
             );
         }
         _ => panic!("Illegal symbol"),
