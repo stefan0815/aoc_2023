@@ -1,67 +1,51 @@
-use std::fs;
 use rayon::prelude::*;
+use std::{
+    fs::{self, OpenOptions},
+    io::Write,
+    sync::Mutex,
+};
 
-fn is_still_valid(springs: &Vec<char>, valid_groups: &Vec<usize>) -> bool {
-    let mut group_start = false;
-    let mut current_group_size = 0;
-    let mut group_index = 0;
-    for i in 0..springs.len() {
-        let spring = springs[i];
-        match (spring, group_start) {
-            ('#', _) => {
-                group_start = true;
-                current_group_size += 1;
-            },
-            ('.', true) => {
-                if group_index >= valid_groups.len() || current_group_size != valid_groups[group_index] {
-                    return false;
-                }
-                group_start = false;
-                current_group_size = 0;
-                group_index += 1;
-            }
-            ('?', _) => {
-                return true;
-            }
-            _ => (),
+fn get_num_valid_arrangements(springs: &Vec<char>, groups: &Vec<usize>) -> usize {
+    if springs.is_empty() {
+        if groups.is_empty() {
+            return 1;
         }
+        return 0;
     }
 
-    if group_start && group_index < valid_groups.len() - 1 || !group_start && group_index < valid_groups.len(){
-        return false;
-    }
+    match springs[0] {
+        '.' => return get_num_valid_arrangements(&springs[1..].to_owned(), &groups),
+        '?' => {
+            return get_num_valid_arrangements(&springs[1..].to_owned(), &groups)
+                + get_num_valid_arrangements(&[&['#'], &springs[1..]].concat(), &groups)
+        }
+        '#' => {
+            if groups.is_empty() {
+                return 0;
+            }
+            if springs.len() < groups[0] || springs[..groups[0]].iter().any(|spring| *spring == '.')
+            {
+                return 0;
+            }
 
-    if group_start && (group_index >= valid_groups.len() || current_group_size != valid_groups[group_index]) {
-        return false;
-    }
-    true
-}
+            if springs.len() > groups[0] && springs[groups[0]] == '#' {
+                return 0;
+            }
 
-fn get_valid_arrangements(springs: &Vec<char>, groups: &Vec<usize>) -> Vec<Vec<char>> {
-    let unknown_springs: Vec<usize> = springs
-        .iter()
-        .enumerate()
-        .filter(|(_, spring)| **spring == '?')
-        .map(|(index, _)| index)
-        .collect();
-    if unknown_springs.len() == 0 {
-        return vec![springs.to_vec()];
-    }
-    let mut springs_one = springs.to_vec();
-    let mut springs_two = springs.to_vec();
+            if springs.len() > groups[0] {
+                return get_num_valid_arrangements(
+                    &springs[(groups[0] + 1)..].to_owned(),
+                    &groups[1..].to_owned(),
+                );
+            }
 
-    springs_one[*unknown_springs.first().unwrap()] = '.';
-    springs_two[*unknown_springs.first().unwrap()] = '#';
-
-    let mut arrangements: Vec<Vec<char>> = Vec::new();
-    if is_still_valid(&springs_one, groups) {
-        arrangements.extend(get_valid_arrangements(&springs_one, groups));
+            return get_num_valid_arrangements(
+                &springs[groups[0]..].to_owned(),
+                &groups[1..].to_owned(),
+            );
+        }
+        _ => panic!("Illegal symbol"),
     }
-    if is_still_valid(&springs_two, groups) {
-        arrangements.extend(get_valid_arrangements(&springs_two, groups));
-    }
-
-    arrangements
 }
 
 fn solve_part_one(input: &Vec<String>) -> usize {
@@ -74,12 +58,28 @@ fn solve_part_one(input: &Vec<String>) -> usize {
                 .split(',')
                 .map(|s| s.parse::<usize>().unwrap())
                 .collect();
-            get_valid_arrangements(&springs, &groups).len()
+            get_num_valid_arrangements(&springs, &groups)
         })
         .sum()
 }
 
-fn solve_part_two(input: &Vec<String>) -> usize {
+fn solve_part_two(input: &Vec<String>, file_path: &str) -> usize {
+    let previous_results =
+        fs::read_to_string(file_path).expect("Should have been able to read the file");
+    let previous_results: Vec<String> = previous_results
+        .split("\n")
+        .into_iter()
+        .map(|s| s.to_owned())
+        .collect();
+
+    let file = OpenOptions::new()
+        .write(true)
+        .append(true)
+        .open(file_path)
+        .unwrap();
+
+    let file = Mutex::new(file);
+
     input
         .par_iter()
         .map(|line| {
@@ -89,6 +89,20 @@ fn solve_part_two(input: &Vec<String>) -> usize {
                 .split(',')
                 .map(|s| s.parse::<usize>().unwrap())
                 .collect();
+            let result_name = format!("{:?}|{:?}", springs, groups);
+            for previous_result in &previous_results {
+                if previous_result.starts_with(&result_name) {
+                    let loaded_value = previous_result
+                        .split('|')
+                        .collect::<Vec<&str>>()
+                        .last()
+                        .unwrap()
+                        .parse::<usize>()
+                        .unwrap();
+                    return loaded_value;
+                }
+            }
+
             let mut adapted_springs = springs.to_vec();
             adapted_springs.push('?');
             adapted_springs.extend(springs.to_vec());
@@ -103,8 +117,11 @@ fn solve_part_two(input: &Vec<String>) -> usize {
             adapted_groups.extend(groups.to_vec());
             adapted_groups.extend(groups.to_vec());
             adapted_groups.extend(groups.to_vec());
-            let num_valid_arrangements = get_valid_arrangements(&adapted_springs, &adapted_groups).len();
-            // println!("num_valid_arrangements: {num_valid_arrangements}");
+
+            let num_valid_arrangements =
+                get_num_valid_arrangements(&adapted_springs, &adapted_groups);
+            let output = format!("{:?}|{:?}|{num_valid_arrangements}\n", springs, groups);
+            file.lock().unwrap().write_all(output.as_bytes()).unwrap();
             num_valid_arrangements
         })
         .sum()
@@ -124,7 +141,7 @@ pub fn solver() {
     let input = get_input("./src/day12/input.txt");
     let sum_part_one = solve_part_one(&input);
     println!("Part 1: {sum_part_one}");
-    let sum_part_two = solve_part_two(&input);
+    let sum_part_two = solve_part_two(&input, "./src/day12/part_two_output.txt");
     println!("Part 2: {sum_part_two}");
 }
 
@@ -150,14 +167,14 @@ mod tests {
     #[test]
     fn day12_example_input_part_two() {
         let input = get_input("./src/day12/example_input.txt");
-        let sum_part_two = solve_part_two(&input);
+        let sum_part_two = solve_part_two(&input, "./src/day12/part_two_example_output.txt");
         assert_eq!(525152, sum_part_two);
     }
 
     #[test]
     fn day12_input_part_two() {
         let input = get_input("./src/day12/input.txt");
-        let sum_part_two = solve_part_two(&input);
+        let sum_part_two = solve_part_two(&input, "./src/day12/part_two_output.txt");
         assert_eq!(0, sum_part_two);
     }
 
@@ -165,11 +182,5 @@ mod tests {
     fn bench_part_one(b: &mut Bencher) {
         let input = get_input("./src/day12/input.txt");
         b.iter(|| solve_part_one(&input))
-    }
-
-    #[bench]
-    fn bench_part_two(b: &mut Bencher) {
-        let input = get_input("./src/day12/input.txt");
-        b.iter(|| solve_part_two(&input))
     }
 }
