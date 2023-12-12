@@ -1,4 +1,4 @@
-use std::fs;
+use std::{collections::VecDeque, fs};
 
 fn get_groups(springs: &Vec<char>) -> Vec<usize> {
     let mut groups: Vec<usize> = Vec::new();
@@ -87,20 +87,24 @@ fn solve_part_two(input: &Vec<String>) -> usize {
                 .split(',')
                 .map(|s| s.parse::<usize>().unwrap())
                 .collect();
-            let valid_arrangements = get_valid_arrangements(&springs, &groups);
-            valid_arrangements
+            let mut adapted_springs = VecDeque::from(springs);
+            adapted_springs.push_back('?');
+            adapted_springs.push_front('?');
+            // if get_valid_arrangements(&springs, &groups).len() ==  1
+
+            let valid_arrangements = get_valid_arrangements(&Vec::from(adapted_springs), &groups);
+            let num_valid_arrangements = valid_arrangements
                 .iter()
-                .map(|valid_arrangements| {
-                    let mut more_springs = Vec::new();
-                    let mut more_groups = Vec::new();
-                    for _ in 0..5 {
-                        more_springs.extend(valid_arrangements);
-                        more_springs.push('?');
-                        more_groups.extend(groups.to_vec());
-                    }
-                    get_valid_arrangements(&more_springs, &more_groups).len()
-                })
-                .sum::<usize>()
+                .filter(|arrangement| arrangement.first().unwrap() == arrangement.last().unwrap())
+                .collect::<Vec<&Vec<char>>>()
+                .len();
+            let multiple = num_valid_arrangements
+                * num_valid_arrangements
+                * num_valid_arrangements
+                * num_valid_arrangements
+                * num_valid_arrangements;
+            println!("{num_valid_arrangements}/{multiple}");
+            multiple
         })
         .sum()
 }
