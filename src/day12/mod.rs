@@ -29,19 +29,13 @@ fn get_num_valid_arrangements(springs: &[char], groups: &[usize]) -> usize {
             }
 
             if springs.len() > groups[0] {
-                if springs[groups[0]] == '#'{
+                if springs[groups[0]] == '#' {
                     return 0;
                 }
-                return get_num_valid_arrangements(
-                    &springs[(groups[0] + 1)..],
-                    &groups[1..],
-                );
+                return get_num_valid_arrangements(&springs[(groups[0] + 1)..], &groups[1..]);
             }
 
-            return get_num_valid_arrangements(
-                &springs[groups[0]..],
-                &groups[1..],
-            );
+            return get_num_valid_arrangements(&springs[groups[0]..], &groups[1..]);
         }
         _ => panic!("Illegal symbol"),
     }
