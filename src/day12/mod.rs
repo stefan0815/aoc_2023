@@ -1,31 +1,43 @@
-use std::{collections::VecDeque, fs};
+use std::fs;
+use rayon::prelude::*;
 
-fn get_groups(springs: &Vec<char>) -> Vec<usize> {
-    let mut groups: Vec<usize> = Vec::new();
+fn is_still_valid(springs: &Vec<char>, valid_groups: &Vec<usize>) -> bool {
     let mut group_start = false;
     let mut current_group_size = 0;
+    let mut group_index = 0;
     for i in 0..springs.len() {
         let spring = springs[i];
         match (spring, group_start) {
             ('#', _) => {
                 group_start = true;
                 current_group_size += 1;
-            }
+            },
             ('.', true) => {
-                groups.push(current_group_size);
+                if group_index >= valid_groups.len() || current_group_size != valid_groups[group_index] {
+                    return false;
+                }
                 group_start = false;
                 current_group_size = 0;
+                group_index += 1;
+            }
+            ('?', _) => {
+                return true;
             }
             _ => (),
         }
     }
-    if group_start {
-        groups.push(current_group_size);
+
+    if group_start && group_index < valid_groups.len() - 1 || !group_start && group_index < valid_groups.len(){
+        return false;
     }
-    groups
+
+    if group_start && (group_index >= valid_groups.len() || current_group_size != valid_groups[group_index]) {
+        return false;
+    }
+    true
 }
 
-fn get_all_arrangements(springs: &Vec<char>) -> Vec<Vec<char>> {
+fn get_valid_arrangements(springs: &Vec<char>, groups: &Vec<usize>) -> Vec<Vec<char>> {
     let unknown_springs: Vec<usize> = springs
         .iter()
         .enumerate()
@@ -40,26 +52,16 @@ fn get_all_arrangements(springs: &Vec<char>) -> Vec<Vec<char>> {
 
     springs_one[*unknown_springs.first().unwrap()] = '.';
     springs_two[*unknown_springs.first().unwrap()] = '#';
+
     let mut arrangements: Vec<Vec<char>> = Vec::new();
-    arrangements.extend(get_all_arrangements(&springs_one));
-    arrangements.extend(get_all_arrangements(&springs_two));
+    if is_still_valid(&springs_one, groups) {
+        arrangements.extend(get_valid_arrangements(&springs_one, groups));
+    }
+    if is_still_valid(&springs_two, groups) {
+        arrangements.extend(get_valid_arrangements(&springs_two, groups));
+    }
 
     arrangements
-}
-
-fn get_valid_arrangements(springs: &Vec<char>, groups: &Vec<usize>) -> Vec<Vec<char>> {
-    let all_arrangements = get_all_arrangements(springs);
-    let valid_groups = all_arrangements
-        .iter()
-        .filter(|springs| get_groups(springs) == *groups)
-        .map(|chars| chars.to_owned())
-        .collect::<Vec<Vec<char>>>();
-    // println!("springs: {:?}", springs);
-    // println!("groups: {:?}", groups);
-    // println!("groups_found: {:?}", get_groups(springs));
-    // println!("all_arrangements: {:?}", all_arrangements);
-    // println!("num_valid_groups: {:?}", num_valid_groups);
-    valid_groups
 }
 
 fn solve_part_one(input: &Vec<String>) -> usize {
@@ -79,7 +81,7 @@ fn solve_part_one(input: &Vec<String>) -> usize {
 
 fn solve_part_two(input: &Vec<String>) -> usize {
     input
-        .iter()
+        .par_iter()
         .map(|line| {
             let split: Vec<String> = line.split_whitespace().map(|s| s.to_owned()).collect();
             let springs: Vec<char> = split[0].chars().collect();
@@ -87,24 +89,23 @@ fn solve_part_two(input: &Vec<String>) -> usize {
                 .split(',')
                 .map(|s| s.parse::<usize>().unwrap())
                 .collect();
-            let mut adapted_springs = VecDeque::from(springs);
-            adapted_springs.push_back('?');
-            adapted_springs.push_front('?');
-            // if get_valid_arrangements(&springs, &groups).len() ==  1
-
-            let valid_arrangements = get_valid_arrangements(&Vec::from(adapted_springs), &groups);
-            let num_valid_arrangements = valid_arrangements
-                .iter()
-                .filter(|arrangement| arrangement.first().unwrap() == arrangement.last().unwrap())
-                .collect::<Vec<&Vec<char>>>()
-                .len();
-            let multiple = num_valid_arrangements
-                * num_valid_arrangements
-                * num_valid_arrangements
-                * num_valid_arrangements
-                * num_valid_arrangements;
-            println!("{num_valid_arrangements}/{multiple}");
-            multiple
+            let mut adapted_springs = springs.to_vec();
+            adapted_springs.push('?');
+            adapted_springs.extend(springs.to_vec());
+            adapted_springs.push('?');
+            adapted_springs.extend(springs.to_vec());
+            adapted_springs.push('?');
+            adapted_springs.extend(springs.to_vec());
+            adapted_springs.push('?');
+            adapted_springs.extend(springs.to_vec());
+            let mut adapted_groups = groups.to_vec();
+            adapted_groups.extend(groups.to_vec());
+            adapted_groups.extend(groups.to_vec());
+            adapted_groups.extend(groups.to_vec());
+            adapted_groups.extend(groups.to_vec());
+            let num_valid_arrangements = get_valid_arrangements(&adapted_springs, &adapted_groups).len();
+            // println!("num_valid_arrangements: {num_valid_arrangements}");
+            num_valid_arrangements
         })
         .sum()
 }
