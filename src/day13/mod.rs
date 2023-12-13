@@ -1,4 +1,4 @@
-use std::{collections::HashSet, fs};
+use std::fs;
 
 fn get_row_reflection_value(mirror: &Vec<Vec<char>>) -> usize {
     for row in 1..mirror.len() {
@@ -87,38 +87,6 @@ fn find_reflection_row_with_smudged_mirror(mirror: &Vec<Vec<char>>) -> Option<us
     None
 }
 
-fn find_smudge_positions(mirror: &Vec<Vec<char>>) -> Option<(usize, [(usize, usize); 2])> {
-    let row = find_reflection_row_with_smudged_mirror(mirror);
-    if row.is_none() {
-        return None;
-    }
-    let row = row.unwrap();
-    let mut reflection_row = (row as i128 - 1, row as i128);
-    loop {
-        if reflection_row.0 < 0 || reflection_row.1 >= mirror.len() as i128 {
-            panic!("No smudge found");
-        }
-        let differences = count_differences(
-            &mirror[reflection_row.0 as usize],
-            &mirror[reflection_row.1 as usize],
-        );
-        if differences.0 > 1 {
-            panic!("Larger smudge found");
-        }
-        if differences.0 == 1 {
-            return Some((
-                row,
-                [
-                    (reflection_row.0 as usize, *differences.1.first().unwrap()),
-                    (reflection_row.1 as usize, *differences.1.first().unwrap()),
-                ],
-            ));
-        }
-        reflection_row.0 -= 1;
-        reflection_row.1 += 1;
-    }
-}
-
 fn solve_part_one(mirrors: &Vec<Vec<Vec<char>>>) -> usize {
     mirrors
         .iter()
@@ -134,67 +102,12 @@ fn solve_part_two(mirrors: &Vec<Vec<Vec<char>>>) -> usize {
     mirrors
         .iter()
         .map(|mirror| {
-            let smudge_row_mirror = find_smudge_positions(mirror);
-            let smudge_col_mirror = find_smudge_positions(&flip_to_col(mirror));
+            let smudge_row_mirror = find_reflection_row_with_smudged_mirror(mirror);
+            let smudge_col_mirror = find_reflection_row_with_smudged_mirror(&flip_to_col(mirror));
             if smudge_row_mirror.is_some() {
-                return smudge_row_mirror.unwrap().0 * 100;
+                return smudge_row_mirror.unwrap() * 100;
             } 
-            smudge_col_mirror.unwrap().0
-
-            // let mut cleaned_mirror = mirror.to_vec();
-            // if smudge_row_mirror.is_some() && smudge_col_mirror.is_some() {
-            //     let mut unique_smudge_positions: HashSet<(usize, usize)> = HashSet::new();
-            //     let smudge_row_mirror = smudge_row_mirror.unwrap();
-            //     let smudge_col_mirror = smudge_col_mirror.unwrap();
-            //     unique_smudge_positions.insert(smudge_row_mirror.1[0]);
-            //     unique_smudge_positions.insert(smudge_row_mirror.1[1]);
-            //     unique_smudge_positions.insert((smudge_col_mirror.1[0].1, smudge_col_mirror.1[0].0));
-            //     unique_smudge_positions.insert((smudge_col_mirror.1[1].1, smudge_col_mirror.1[1].0));
-            //     let mut smudge_count = (0, 0); // . and #
-            //     for &(row, col) in &unique_smudge_positions {
-            //         if mirror[row][col] == '.' {
-            //             smudge_count.0 += 1;
-            //         } else {
-            //             smudge_count.1 += 1;
-            //         }
-            //     }
-            //     for &(row, col) in &unique_smudge_positions {
-            //         if smudge_count.0 > smudge_count.1 {
-            //             cleaned_mirror[row][col] = '.'
-            //         } else {
-            //             cleaned_mirror[row][col] = '#'
-            //         }
-            //     }
-            // } else if smudge_row_mirror.is_some() {
-            //     let smudge_row_mirror = smudge_row_mirror.unwrap();
-            //     cleaned_mirror[smudge_row_mirror.1[0].0][smudge_row_mirror.1[0].1] = '?'; // only one mirror direction found symbol does not matter
-            //     cleaned_mirror[smudge_row_mirror.1[1].0][smudge_row_mirror.1[1].1] = '?';
-            // } else if smudge_col_mirror.is_some() {
-            //     let smudge_col_mirror = smudge_col_mirror.unwrap();
-            //     cleaned_mirror[smudge_col_mirror.1[0].1][smudge_col_mirror.1[0].0] = '?'; // only one mirror direction found symbol does not matter
-            //     cleaned_mirror[smudge_col_mirror.1[1].1][smudge_col_mirror.1[1].0] = '?';
-            // } else {
-            //     panic!("No smudge found");
-            // }
-            // println!("cleaned_mirror:{:?}", cleaned_mirror);
-            // println!("cleaned_col_mirror:{:?}", flip_to_col(&cleaned_mirror));
-            // let old_row_value = get_row_reflection_value(&mirror);
-            // let old_col_value = get_row_reflection_value(&flip_to_col(&mirror));
-            // let mut row_value = get_row_reflection_value(&cleaned_mirror);
-            // let mut col_value = get_row_reflection_value(&flip_to_col(&cleaned_mirror));
-
-            // if old_row_value == row_value && old_col_value == col_value {
-            //     panic!("No new reflection found");
-            // }
-            // if old_row_value == row_value {
-            //     row_value = 0
-            // }
-
-            // if old_col_value == col_value {
-            //     col_value = 0
-            // }
-
-            // row_value * 100 + col_value
+            smudge_col_mirror.unwrap()
         })
         .sum()
 }
