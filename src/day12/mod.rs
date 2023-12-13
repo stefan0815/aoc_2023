@@ -18,6 +18,18 @@ fn get_num_valid_arrangements(
         return 0;
     }
 
+    if groups.is_empty(){
+        if springs.iter().any(|spring| *spring == '#'){
+            return 0;
+        }
+        return 1;
+    }
+
+    if springs.len() < necessary_failures + groups.len() - 1 {
+        return 0;
+    }
+
+
     if possible_failures < necessary_failures {
         return 0;
     }
@@ -81,6 +93,44 @@ fn solve_part_one(input: &Vec<String>) -> usize {
         })
         .sum()
 }
+
+// fn solve_part_two_without_cache(input: &Vec<String>) -> usize {
+//     input
+//         .par_iter()
+//         .map(|line| {
+//             let split: Vec<String> = line.split_whitespace().map(|s| s.to_owned()).collect();
+//             let springs: Vec<char> = split[0].chars().collect();
+//             let groups: Vec<usize> = split[1]
+//                 .split(',')
+//                 .map(|s| s.parse::<usize>().unwrap())
+//                 .collect();
+//             let mut adapted_springs = springs.to_vec();
+//             adapted_springs.push('?');
+//             adapted_springs.extend(springs.to_vec());
+//             adapted_springs.push('?');
+//             adapted_springs.extend(springs.to_vec());
+//             adapted_springs.push('?');
+//             adapted_springs.extend(springs.to_vec());
+//             adapted_springs.push('?');
+//             adapted_springs.extend(springs.to_vec());
+//             let mut adapted_groups = groups.to_vec();
+//             adapted_groups.extend(groups.to_vec());
+//             adapted_groups.extend(groups.to_vec());
+//             adapted_groups.extend(groups.to_vec());
+//             adapted_groups.extend(groups.to_vec());
+
+//             let possible_failures = adapted_springs
+//                 .iter()
+//                 .filter(|spring| **spring != '.')
+//                 .count();
+//             let necessary_failures:usize = adapted_groups.iter().sum::<usize>();
+            
+//             let num_valid_arrangements =
+//                 get_num_valid_arrangements(&adapted_springs, &adapted_groups, possible_failures, necessary_failures);
+//             num_valid_arrangements
+//         })
+//         .sum()
+// }
 
 fn solve_part_two(input: &Vec<String>, file_path: &str) -> usize {
     let previous_results =
@@ -208,4 +258,10 @@ mod tests {
         let input = get_input("./src/day12/input.txt");
         b.iter(|| solve_part_one(&input))
     }
+
+    // #[bench]
+    // fn bench_part_two(b: &mut Bencher) {
+    //     let input = get_input("./src/day12/example_input.txt");
+    //     b.iter(|| solve_part_two_without_cache(&input))
+    // }
 }
