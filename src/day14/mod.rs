@@ -10,16 +10,6 @@ fn flip_to_col(platform: &Vec<Vec<char>>) -> Vec<Vec<char>> {
     col_based_platform
 }
 
-fn calculate_load(platform: &Vec<Vec<char>>) -> usize {
-    platform
-        .iter()
-        .enumerate()
-        .map(|(row_index, row)| {
-            row.iter().filter(|tile| **tile == 'O').count() * (platform.len() - row_index)
-        })
-        .sum()
-}
-
 fn reverse_platform(platform: &Vec<Vec<char>>) -> Vec<Vec<char>> {
     let mut reversed_platform: Vec<Vec<char>> = platform.to_vec();
     for row in reversed_platform.iter_mut() {
@@ -66,6 +56,16 @@ fn tilt_east(platform: &Vec<Vec<char>>) -> Vec<Vec<char>> {
 
 fn tilt_south(platform: &Vec<Vec<char>>) -> Vec<Vec<char>> {
     flip_to_col(&tilt_east(&flip_to_col(platform)))
+}
+
+fn calculate_load(platform: &Vec<Vec<char>>) -> usize {
+    platform
+        .iter()
+        .enumerate()
+        .map(|(row_index, row)| {
+            row.iter().filter(|tile| **tile == 'O').count() * (platform.len() - row_index)
+        })
+        .sum()
 }
 
 fn solve_part_one(platform: &Vec<Vec<char>>) -> usize {
