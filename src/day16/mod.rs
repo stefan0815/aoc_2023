@@ -5,70 +5,58 @@ fn cast_ray(
     pos: (i128, i128),
     direction: (i128, i128),
     visited: &mut HashSet<(i128, i128)>,
-    ray_cache: &mut HashSet<((i128, i128), (i128, i128))>
+    ray_cache: &mut HashSet<((i128, i128), (i128, i128))>,
 ) {
-    if ray_cache.contains(&(pos,direction)){
-        return;
-    }
-
-    if pos.0 < 0
-        || pos.0 >= layout.len() as i128
-        || pos.1 < 0
-        || pos.1 >= layout[pos.0 as usize].len() as i128
-    {
-        return;
-    }
-
-    ray_cache.insert((pos,direction));
-    visited.insert(pos);
-
-    match (layout[pos.0 as usize][pos.1 as usize], direction) {
-        ('.', _) | ('-', (0, _)) | ('|', (_, 0)) => cast_ray(
-            layout,
-            (pos.0 + direction.0, pos.1 + direction.1),
-            direction,
-            visited,
-            ray_cache,
-        ),
-        ('/', _) => {
-            let direction = (-direction.1, -direction.0);
-            cast_ray(
-                layout,
-                (pos.0 + direction.0, pos.1 + direction.1),
-                direction,
-                visited,
-                ray_cache,
-            );
+    let mut current_pos = pos;
+    let mut current_direction = direction;
+    loop {
+        if current_pos.0 < 0
+            || current_pos.0 >= layout.len() as i128
+            || current_pos.1 < 0
+            || current_pos.1 >= layout[current_pos.0 as usize].len() as i128
+        {
+            return;
         }
-        ('\\', _) => {
-            let direction = (direction.1, direction.0);
-            cast_ray(
-                layout,
-                (pos.0 + direction.0, pos.1 + direction.1),
-                direction,
-                visited,
-                ray_cache,
-            );
+
+        if ray_cache.contains(&(current_pos, current_direction)) {
+            return;
         }
-        ('-', (_, 0)) | ('|', (0, _)) => {
-            let new_direction = (direction.1, direction.0);
-            cast_ray(
-                layout,
-                (pos.0 + new_direction.0, pos.1 + new_direction.1),
-                new_direction,
-                visited,
-                ray_cache,
-            );
-            let new_direction = (-direction.1, -direction.0);
-            cast_ray(
-                layout,
-                (pos.0 + new_direction.0, pos.1 + new_direction.1),
-                new_direction,
-                visited,
-                ray_cache,
-            );
+
+        visited.insert(current_pos);
+        ray_cache.insert((current_pos,current_direction));
+
+        match (
+            layout[current_pos.0 as usize][current_pos.1 as usize],
+            current_direction,
+        ) {
+            ('.', _) | ('-', (0, _)) | ('|', (_, 0)) => (),
+            ('/', _) => {
+                current_direction = (-current_direction.1, -current_direction.0);
+            }
+            ('\\', _) => {
+                current_direction = (current_direction.1, current_direction.0);
+            }
+            ('-', (_, 0)) | ('|', (0, _)) => {
+                let split_ray_direction = (-current_direction.1, -current_direction.0);
+                cast_ray(
+                    layout,
+                    (
+                        current_pos.0 + split_ray_direction.0,
+                        current_pos.1 + split_ray_direction.1,
+                    ),
+                    split_ray_direction,
+                    visited,
+                    ray_cache,
+                );
+                current_direction = (current_direction.1, current_direction.0);
+            }
+            _ => panic!("invalid symbol"),
         }
-        _ => panic!("invalid symbol"),
+
+        current_pos = (
+            current_pos.0 + current_direction.0,
+            current_pos.1 + current_direction.1,
+        );
     }
 }
 
@@ -116,7 +104,7 @@ mod tests {
     fn day16_input_part_one() {
         let input = get_input("./src/day16/input.txt");
         let sum_part_one = solve_part_one(&input);
-        assert_eq!(504036, sum_part_one);
+        assert_eq!(7562, sum_part_one);
     }
 
     #[test]
