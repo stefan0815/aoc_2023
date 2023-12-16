@@ -51,19 +51,19 @@ fn cast_ray(
             );
         }
         ('-', (_, 0)) | ('|', (0, _)) => {
-            let direction = (direction.1, direction.0);
+            let new_direction = (direction.1, direction.0);
             cast_ray(
                 layout,
-                (pos.0 + direction.0, pos.1 + direction.1),
-                direction,
+                (pos.0 + new_direction.0, pos.1 + new_direction.1),
+                new_direction,
                 visited,
                 ray_cache,
             );
-            let direction = (-direction.0, -direction.1);
+            let new_direction = (-direction.1, -direction.0);
             cast_ray(
                 layout,
-                (pos.0 + direction.0, pos.1 + direction.1),
-                direction,
+                (pos.0 + new_direction.0, pos.1 + new_direction.1),
+                new_direction,
                 visited,
                 ray_cache,
             );
