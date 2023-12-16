@@ -1,4 +1,4 @@
-use std::{collections::HashSet, fs};
+use std::{collections::HashSet, fs, cmp::max};
 
 fn cast_ray(
     layout: &Vec<Vec<char>>,
@@ -23,7 +23,7 @@ fn cast_ray(
         }
 
         visited.insert(current_pos);
-        ray_cache.insert((current_pos,current_direction));
+        ray_cache.insert((current_pos, current_direction));
 
         match (
             layout[current_pos.0 as usize][current_pos.1 as usize],
@@ -63,12 +63,44 @@ fn cast_ray(
 fn solve_part_one(layout: &Vec<Vec<char>>) -> usize {
     let mut visited = HashSet::new();
     let mut ray_cache = HashSet::new();
-    cast_ray(layout, (0, 0), (0, 1), &mut visited, &mut ray_cache);
+    cast_ray(layout, (0,0), (0,1), &mut visited, &mut ray_cache);
     visited.len()
 }
 
-fn solve_part_two(_: &Vec<Vec<char>>) -> usize {
-    0
+fn solve_part_two(layout: &Vec<Vec<char>>) -> usize {
+    // println!("layout: ({},{})", layout.len(), layout[0].len());
+    let mut starts: Vec<((i128, i128), (i128, i128))> = Vec::new();
+    // from top and bot
+    for i in 0..layout[0].len() {
+        let start_pos = (0, i as i128);
+        let start_direction = (1, 0);
+        starts.push((start_pos, start_direction));
+
+        let start_pos = (layout.len() as i128 - 1, i as i128);
+        let start_direction = (-1, 0);
+        starts.push((start_pos, start_direction));
+    }
+
+    // from left and right
+    for i in 0..layout.len() {
+        let start_pos = (i as i128, 0);
+        let start_direction = (0, 1);
+        starts.push((start_pos, start_direction));
+
+        let start_pos = (i as i128, layout[i].len() as i128 - 1);
+        let start_direction = (0, -1);
+        starts.push((start_pos, start_direction));
+    }
+
+    let mut max_tiles = 0;
+    for start in starts {
+        // println!("start_pos: ({}, {}), start_direction: ({}, {})", start.0.0, start.0.1, start.1.0, start.1.1);
+        let mut visited = HashSet::new();
+        let mut ray_cache = HashSet::new();
+        cast_ray(layout, start.0, start.1, &mut visited, &mut ray_cache);
+        max_tiles = max(max_tiles, visited.len());
+    }
+    max_tiles
 }
 
 fn get_input(file: &str) -> Vec<Vec<char>> {
@@ -111,14 +143,14 @@ mod tests {
     fn day16_example_input_part_two() {
         let input = get_input("./src/day16/example_input.txt");
         let sum_part_two = solve_part_two(&input);
-        assert_eq!(145, sum_part_two);
+        assert_eq!(51, sum_part_two);
     }
 
     #[test]
     fn day16_input_part_two() {
         let input = get_input("./src/day16/input.txt");
         let sum_part_two = solve_part_two(&input);
-        assert_eq!(295719, sum_part_two);
+        assert_eq!(7793, sum_part_two);
     }
 
     #[bench]
