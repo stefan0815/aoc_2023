@@ -1,83 +1,124 @@
+use pathfinding::prelude::astar;
 use std::{collections::HashMap, fs};
 
-fn find_route(
-    layout: &Vec<Vec<usize>>,
-    pos: (i128, i128),
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+struct Pos {
+    layout: Vec<Vec<i128>>,
+    position: (i128, i128),
     direction: (i128, i128),
     heat_loss: i128,
-    straight_steps: usize,
-    heat_loss_map: &mut HashMap<(usize, usize), i128>,
-) {
-    // println!("({}, {})", pos.0, pos.1);
-    if pos.0 < 0
-        || pos.0 >= layout.len() as i128
-        || pos.1 < 0
-        || pos.1 >= layout[pos.0 as usize].len() as i128
-    {
-        return;
+    heat_loss_so_far: i128,
+    straight_steps: i128,
+}
+
+impl Pos {
+    fn distance(&self, other: &Pos) -> i128 {
+        (self.position.0.abs_diff(other.position.0) + self.position.1.abs_diff(other.position.1))
+            as i128
     }
 
-    let heat_loss = heat_loss + layout[pos.0 as usize][pos.1 as usize] as i128;
-    // maybe map needs to contain direction as different angles and straight steps might be a factor
-    if heat_loss_map.contains_key(&(pos.0 as usize, pos.1 as usize)) {
-        let best_heat_loss_so_far = heat_loss_map[&(pos.0 as usize, pos.1 as usize)];
-        if heat_loss > best_heat_loss_so_far {
-            return;
+    fn distance_simple(&self, other: &(i128, i128)) -> i128 {
+        (self.position.0.abs_diff(other.0) + self.position.1.abs_diff(other.1))
+            as i128
+    }
+
+    fn successors(&self) -> Vec<(Pos, i128)> {
+        let mut next_positions: Vec<Pos> = Vec::new();
+        if self.straight_steps < 3 {
+            let next_pos = (
+                self.position.0 + self.direction.0,
+                self.position.1 + self.direction.1,
+            );
+            if in_bounds(&self.layout, &next_pos) {
+                let heat_loss: i128 = self.layout[next_pos.0 as usize][next_pos.1 as usize];
+                let straight_pos = Pos {
+                    layout: self.layout.to_vec(),
+                    position: next_pos,
+                    direction: self.direction,
+                    heat_loss,
+                    heat_loss_so_far: self.heat_loss_so_far + heat_loss,
+                    straight_steps: self.straight_steps + 1,
+                };
+                next_positions.push(straight_pos);
+            }
         }
-        if heat_loss < best_heat_loss_so_far {
-            *heat_loss_map
-                .get_mut(&(pos.0 as usize, pos.1 as usize))
-                .unwrap() = heat_loss;
+
+        let left_turn = (-self.direction.1, -self.direction.0);
+        let next_pos = (self.position.0 + left_turn.0, self.position.1 + left_turn.1);
+        if in_bounds(&self.layout, &next_pos) {
+            let heat_loss: i128 = self.layout[next_pos.0 as usize][next_pos.1 as usize];
+            let left_pos = Pos {
+                layout: self.layout.to_vec(),
+                position: next_pos,
+                direction: left_turn,
+                heat_loss,
+                heat_loss_so_far: self.heat_loss_so_far + heat_loss,
+                straight_steps: 1,
+            };
+            next_positions.push(left_pos);
         }
-    } else {
-        heat_loss_map.insert((pos.0 as usize, pos.1 as usize), heat_loss);
-    }
 
-    if pos.0 as usize == layout.len() - 1 && pos.1 as usize == layout[layout.len() - 1].len() - 1 {
-        return;
-    }
-
-    if straight_steps < 3 {
-        let next_pos = (pos.0 + direction.0, pos.1 + direction.1);
-        find_route(
-            layout,
-            next_pos,
-            direction,
-            heat_loss,
-            straight_steps + 1,
-            heat_loss_map,
+        let right_turn = (self.direction.1, self.direction.0);
+        let next_pos = (
+            self.position.0 + right_turn.0,
+            self.position.1 + right_turn.1,
         );
+        if in_bounds(&self.layout, &next_pos) {
+            let heat_loss: i128 = self.layout[next_pos.0 as usize][next_pos.1 as usize];
+            let right_pos = Pos {
+                layout: self.layout.to_vec(),
+                position: next_pos,
+                direction: right_turn,
+                heat_loss,
+                heat_loss_so_far: self.heat_loss_so_far + heat_loss,
+                straight_steps: 1,
+            };
+            next_positions.push(right_pos);
+        }
+
+        next_positions
+            .iter()
+            .map(|p| {
+                (
+                    p.clone(),
+                    p.layout[p.position.0 as usize][p.position.1 as usize],
+                )
+            })
+            .collect()
     }
-
-    let left_turn = (-direction.1, -direction.0);
-    let next_pos = (pos.0 + left_turn.0, pos.1 + left_turn.1);
-    find_route(layout, next_pos, left_turn, heat_loss, 1, heat_loss_map);
-
-    let right_turn = (direction.1, direction.0);
-    let next_pos = (pos.0 + right_turn.0, pos.1 + right_turn.1);
-    find_route(layout, next_pos, right_turn, heat_loss, 1, heat_loss_map);
 }
 
-fn solve_part_one(layout: &Vec<Vec<usize>>) -> usize {
-    let mut heat_loss_map: HashMap<(usize, usize), i128> = HashMap::new();
-    heat_loss_map.insert((0, 0), -50);
-    find_route(layout, (0, 1), (0, 1), 0, 1, &mut heat_loss_map);
-    find_route(layout, (1, 0), (1, 0), 0, 1, &mut heat_loss_map);
-    // for row in 0..layout.len() {
-    //     for col in 0..layout[row].len() {
-    //         print!("{},", heat_loss_map[&(row, col)]);
-    //     }
-    //     println!();
-    // }
-    // println!("{:?}", heat_loss_map);
-    heat_loss_map[&(layout.len() - 1, layout[layout.len() - 1].len() - 1)] as usize
+fn in_bounds(height_map: &Vec<Vec<i128>>, position: &(i128, i128)) -> bool {
+    return 0 <= position.0
+        && position.0 < height_map.len() as i128
+        && 0 <= position.1
+        && position.1 < height_map.first().unwrap().len() as i128;
 }
 
-fn solve_part_two(_: &Vec<Vec<usize>>) -> usize {
+fn solve_part_one(layout: &Vec<Vec<i128>>) -> i128 {
+    let goal: (i128, i128) = ((layout.len() - 1) as i128, (layout[layout.len() - 1].len() - 1) as i128);
+    let start: Pos = Pos {
+        layout: layout.to_vec(),
+        position: (0,0),
+        direction: (0,1),
+        heat_loss: 0,
+        heat_loss_so_far: 0,
+        straight_steps: 1,
+    };
+    let result = astar(
+        &start,
+        |p| p.successors(),
+        |p| p.distance_simple(&goal) / 3,
+        |p| p.position == goal,
+    );
+    result.unwrap().1
+}
+
+fn solve_part_two(_: &Vec<Vec<i128>>) -> i128 {
     0
 }
 
-fn get_input(file: &str) -> Vec<Vec<usize>> {
+fn get_input(file: &str) -> Vec<Vec<i128>> {
     let input = fs::read_to_string(file).expect("Should have been able to read the file");
     input
         .split("\r\n")
@@ -85,8 +126,8 @@ fn get_input(file: &str) -> Vec<Vec<usize>> {
         .map(|s| {
             s.to_owned()
                 .chars()
-                .map(|symbol| symbol.to_digit(10).unwrap() as usize)
-                .collect::<Vec<usize>>()
+                .map(|symbol| symbol.to_digit(10).unwrap() as i128)
+                .collect::<Vec<i128>>()
         })
         .collect()
 }
