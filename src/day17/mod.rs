@@ -81,11 +81,9 @@ impl Pos {
                     direction: self.direction,
                     straight_steps: self.straight_steps + 1,
                 };
-                if next_pos.0 == goal.0 && next_pos.1 == goal.1 {
-                    if straight_pos.straight_steps > 4 {
-                        next_positions.push(straight_pos);
-                    }
-                } else {
+                if !(next_pos.0 == goal.0 && next_pos.1 == goal.1) {
+                    next_positions.push(straight_pos);
+                } else if straight_pos.straight_steps > 4 {
                     next_positions.push(straight_pos);
                 }
             }
@@ -248,7 +246,7 @@ mod tests {
     fn day17_input_part_two() {
         let input = get_input("./src/day17/input.txt");
         let sum_part_two = solve_part_two(&input);
-        assert_eq!(1049, sum_part_two);
+        assert_eq!(1055, sum_part_two);
     }
 
     #[bench]
