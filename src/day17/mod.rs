@@ -83,7 +83,7 @@ impl Pos {
                 };
                 if !(next_pos.0 == goal.0 && next_pos.1 == goal.1) {
                     next_positions.push(straight_pos);
-                } else if straight_pos.straight_steps > 4 {
+                } else if straight_pos.straight_steps >= 4 {
                     next_positions.push(straight_pos);
                 }
             }
