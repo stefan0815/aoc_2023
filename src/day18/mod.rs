@@ -1,8 +1,7 @@
-use num::{abs, Integer};
+use num::abs;
 use std::{
     cmp::{max, min},
-    fs::{self, File},
-    io::Write,
+    fs,
 };
 
 fn count_enclosed_spaces(input_map: &Vec<Vec<char>>) -> usize {
@@ -98,46 +97,18 @@ fn solve_part_one(instructions: &Vec<Vec<String>>) -> usize {
             symbol
     }
 
-    let mut file = File::create("./src/day18/map.txt").unwrap();
-    for row in &map {
-        for col in row {
-            file.write_all(&vec![*col as u8]);
-        }
-        file.write_all(b"\n");
-    }
-
     layout.len() + count_enclosed_spaces(&map)
 }
 
 fn calculate_signed_area(corners: &Vec<(i128, i128)>) -> i128 {
     let mut total_area = 0;
-    let mut total_base_area = 0;
     for i in 2..corners.len() {
         let one = corners[i];
         let two = corners[i - 1];
-        println!("one: {:?}", one);
-        println!("two: {:?}", two);
-        let adjusted_one = (one.0 + one.0.signum(), one.1 + one.1.signum());
-        let adjusted_two = (two.0 - one.0, two.1 - one.1);
-        let adjusted_two = (
-            adjusted_two.0 + adjusted_two.0.signum(),
-            adjusted_two.1 + adjusted_two.1.signum(),
-        );
-        println!("adjusted_one: {:?}", adjusted_one);
-        println!("adjusted_two: {:?}", adjusted_two);
-        let base_area: i128 = one.0 * (two.1 - one.1) - one.1 * (two.0 - one.0);
-        let area: i128 = adjusted_one.0 * adjusted_two.1 - adjusted_one.1 * adjusted_two.0;
+        let area: i128 = one.0 * two.1 - one.1 * two.0;
         total_area += area;
-        total_base_area += base_area;
-        // println!("total_area: {total_area}, area: {area}, total_base_area: {total_base_area}, base_area: {base_area}");
     }
-    println!(
-        "total_area / 2: {}, total_base_area / 2 {}",
-        total_area / 2,
-        total_base_area / 2
-    );
-
-    total_base_area / 2
+    total_area / 2
 }
 
 fn solve_part_two(instructions: &Vec<Vec<String>>) -> usize {
@@ -155,16 +126,6 @@ fn solve_part_two(instructions: &Vec<Vec<String>>) -> usize {
             '3' => direction = (-1, 0),
             _ => panic!("Invalid command"),
         }
-        // let direction_string = command[0].chars().collect::<Vec<char>>()[0];
-        // let steps = command[1].parse::<i128>().unwrap();
-        // let direction: (i128, i128);
-        // match direction_string {
-        //     'R' => direction = (0, 1),
-        //     'D' => direction = (1, 0),
-        //     'L' => direction = (0, -1),
-        //     'U' => direction = (-1, 0),
-        //     _ => panic!("Invalid command"),
-        // }
         commands.push((direction, steps));
     });
 
@@ -180,8 +141,6 @@ fn solve_part_two(instructions: &Vec<Vec<String>>) -> usize {
         total_steps += steps;
         corners.push(next_corner);
     });
-    println!("{:?}", corners);
-    println!("total_steps: {total_steps}");
     corners.pop();
 
     (total_steps as f64 * 0.5) as usize + abs(calculate_signed_area(&corners)) as usize + 1
@@ -224,30 +183,6 @@ mod tests {
     }
 
     #[test]
-    fn day18_calculate_signed_area_25() {
-        let area = calculate_signed_area(&vec![(0, 0), (0, 4), (4, 4), (4, 0)]);
-        assert_eq!(25, area);
-    }
-
-    #[test]
-    fn day18_calculate_signed_area_minus_still_25() {
-        let area = calculate_signed_area(&vec![(0, 0), (0, -4), (-4, -4), (-4, 0)]);
-        assert_eq!(25, area);
-    }
-
-    #[test]
-    fn day18_calculate_signed_area_minus_25() {
-        let area = calculate_signed_area(&vec![(0, 0), (-4, 0), (-4, -4), (0, -4)]);
-        assert_eq!(-25, area);
-    }
-
-    #[test]
-    fn day18_calculate_signed_area_50() {
-        let area = calculate_signed_area(&vec![(0, 0), (0, 4), (4, 4), (4, 0), (4, -4), (0, -4)]);
-        assert_eq!(50, area);
-    }
-
-    #[test]
     fn day18_example_input_part_two() {
         let input = get_input("./src/day18/example_input.txt");
         let sum_part_two = solve_part_two(&input);
@@ -258,7 +193,7 @@ mod tests {
     fn day18_input_part_two() {
         let input = get_input("./src/day18/input.txt");
         let sum_part_two = solve_part_two(&input);
-        assert_eq!(1055, sum_part_two);
+        assert_eq!(201398068194715, sum_part_two);
     }
 
     #[bench]
