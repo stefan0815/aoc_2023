@@ -111,6 +111,45 @@ fn calculate_signed_area(corners: &Vec<(i128, i128)>) -> i128 {
     total_area / 2
 }
 
+fn calculate_area(commands: &Vec<((i128, i128), i128)>) -> usize {
+    let mut corners: Vec<(i128, i128)> = Vec::new();
+    let mut total_steps = 0;
+    corners.push((0, 0));
+    commands.iter().for_each(|(direction, steps)| {
+        let last_corner = *corners.last().unwrap();
+        let next_corner = (
+            last_corner.0 + direction.0 * steps,
+            last_corner.1 + direction.1 * steps,
+        );
+        total_steps += steps;
+        corners.push(next_corner);
+    });
+    corners.pop();
+
+    (total_steps as f64 * 0.5) as usize + abs(calculate_signed_area(&corners)) as usize + 1
+}
+
+#[cfg(test)]
+fn solve_part_one_with_part_two_solver(instructions: &Vec<Vec<String>>) -> usize {
+    let mut commands: Vec<((i128, i128), i128)> = Vec::new();
+
+    instructions.iter().for_each(|command| {
+        let direction_string = command[0].chars().collect::<Vec<char>>()[0];
+        let steps = command[1].parse::<i128>().unwrap();
+        let direction: (i128, i128);
+        match direction_string {
+            'R' => direction = (0, 1),
+            'D' => direction = (1, 0),
+            'L' => direction = (0, -1),
+            'U' => direction = (-1, 0),
+            _ => panic!("Invalid command"),
+        }
+        commands.push((direction, steps));
+    });
+
+    calculate_area(&commands)
+}
+
 fn solve_part_two(instructions: &Vec<Vec<String>>) -> usize {
     let mut commands: Vec<((i128, i128), i128)> = Vec::new();
 
@@ -129,21 +168,7 @@ fn solve_part_two(instructions: &Vec<Vec<String>>) -> usize {
         commands.push((direction, steps));
     });
 
-    let mut corners: Vec<(i128, i128)> = Vec::new();
-    let mut total_steps = 0;
-    corners.push((0, 0));
-    commands.iter().for_each(|(direction, steps)| {
-        let last_corner = *corners.last().unwrap();
-        let next_corner = (
-            last_corner.0 + direction.0 * steps,
-            last_corner.1 + direction.1 * steps,
-        );
-        total_steps += steps;
-        corners.push(next_corner);
-    });
-    corners.pop();
-
-    (total_steps as f64 * 0.5) as usize + abs(calculate_signed_area(&corners)) as usize + 1
+    calculate_area(&commands)
 }
 
 fn get_input(file: &str) -> Vec<Vec<String>> {
@@ -179,6 +204,20 @@ mod tests {
     fn day18_input_part_one() {
         let input = get_input("./src/day18/input.txt");
         let sum_part_one = solve_part_one(&input);
+        assert_eq!(46394, sum_part_one);
+    }
+
+    #[test]
+    fn day18_example_input_part_one_with_part_two_solver() {
+        let input = get_input("./src/day18/example_input.txt");
+        let sum_part_one = solve_part_one_with_part_two_solver(&input);
+        assert_eq!(62, sum_part_one);
+    }
+
+    #[test]
+    fn day18_input_part_one_with_part_two_solver() {
+        let input = get_input("./src/day18/input.txt");
+        let sum_part_one = solve_part_one_with_part_two_solver(&input);
         assert_eq!(46394, sum_part_one);
     }
 
