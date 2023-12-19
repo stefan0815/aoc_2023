@@ -1,4 +1,3 @@
-use num::abs;
 use std::{
     cmp::{max, min},
     collections::HashMap,
@@ -48,8 +47,8 @@ fn solve_part_one(
                     workflow_name = current_workflow.fallback.to_owned();
                 }
                 if workflow_name == "A" {
-                    return part.iter().map(|(_, value)| value).sum()
-                }else if workflow_name == "R"{
+                    return part.iter().map(|(_, value)| value).sum();
+                } else if workflow_name == "R" {
                     return 0;
                 }
             }
@@ -57,11 +56,67 @@ fn solve_part_one(
         .sum()
 }
 
-fn solve_part_two(
-    (workflows, _): &(HashMap<String, Workflow>, Vec<HashMap<char, i128>>),
-) -> i128 {
-    
-    0
+fn get_combinations(accepted_parts: &HashMap<char, (i128, i128)>) -> usize {
+    let mut combinations = 1;
+    for (_, (lower, upper)) in accepted_parts {
+        let possibilities = max(upper - lower - 1, 0) as usize;
+        combinations *= possibilities;
+    }
+    combinations
+}
+
+fn check_workflow_with_range(
+    workflows: &HashMap<String, Workflow>,
+    workflow_name: &String,
+    accepted_parts: &HashMap<char, (i128, i128)>,
+) -> usize {
+    let mut sum = 0;
+    let workflow = &workflows[workflow_name];
+    let mut current_accepted_parts = accepted_parts.clone();
+    for test_step in 0..workflow.tests.len() {
+        let mut recursive_accepted_parts = current_accepted_parts.clone();
+        let test = &workflow.tests[test_step];
+        let current_attribute = current_accepted_parts.get_mut(&test.attribute).unwrap();
+        let recursive_attribute = recursive_accepted_parts.get_mut(&test.attribute).unwrap();
+
+        match test.compare {
+            '<' => {
+                recursive_attribute.0 = min(recursive_attribute.0, test.compare_to);
+                recursive_attribute.1 = min(recursive_attribute.1, test.compare_to);
+                current_attribute.0 = max(current_attribute.0, test.compare_to - 1);
+                current_attribute.1 = max(current_attribute.1, test.compare_to - 1);
+            }
+            '>' => {
+                recursive_attribute.0 = max(recursive_attribute.0, test.compare_to);
+                recursive_attribute.1 = max(recursive_attribute.1, test.compare_to);
+                current_attribute.0 = min(current_attribute.0, test.compare_to + 1);
+                current_attribute.1 = min(current_attribute.1, test.compare_to + 1);
+            }
+            _ => panic!("Compare symbol"),
+        }
+        if recursive_attribute.0 + 1 < recursive_attribute.1 {
+            sum += check_workflow_with_range(workflows, &test.next_workflow, &recursive_accepted_parts);
+        }
+        if !(current_attribute.0 + 1 < current_attribute.1) {
+            return sum;
+        }
+    }
+    if workflow.fallback == "A" {
+        sum += get_combinations(&current_accepted_parts);
+    }
+    if workflow.fallback != "R" {
+        sum += check_workflow_with_range(workflows, &workflow.fallback, &current_accepted_parts)
+    }
+    sum
+}
+
+fn solve_part_two((workflows, _): &(HashMap<String, Workflow>, Vec<HashMap<char, i128>>)) -> usize {
+    let mut accepted_parts: HashMap<char, (i128, i128)> = HashMap::new();
+    accepted_parts.insert('x', (0, 4001));
+    accepted_parts.insert('m', (0, 4001));
+    accepted_parts.insert('a', (0, 4001));
+    accepted_parts.insert('s', (0, 4001));
+    check_workflow_with_range(&workflows, &"in".to_owned(), &accepted_parts)
 }
 
 fn get_input(file: &str) -> (HashMap<String, Workflow>, Vec<HashMap<char, i128>>) {
@@ -166,7 +221,7 @@ mod tests {
     fn day19_example_input_part_two() {
         let input = get_input("./src/day19/example_input.txt");
         let sum_part_two = solve_part_two(&input);
-        assert_eq!(952408144115, sum_part_two);
+        assert_eq!(167409079868000, sum_part_two);
     }
 
     #[test]
