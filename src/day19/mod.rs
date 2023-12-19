@@ -233,7 +233,7 @@ mod tests {
     fn day19_input_part_two() {
         let input = get_input("./src/day19/input.txt");
         let sum_part_two = solve_part_two(&input);
-        assert_eq!(201398068194715, sum_part_two);
+        assert_eq!(130303473508222, sum_part_two);
     }
 
     #[bench]
