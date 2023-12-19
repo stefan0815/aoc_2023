@@ -95,7 +95,12 @@ fn check_workflow_with_range(
             _ => panic!("Compare symbol"),
         }
         if recursive_attribute.0 + 1 < recursive_attribute.1 {
-            sum += check_workflow_with_range(workflows, &test.next_workflow, &recursive_accepted_parts);
+            if test.next_workflow == "A"{
+                sum += get_combinations(&recursive_accepted_parts);
+            }
+            else if test.next_workflow  != "R" {
+                sum += check_workflow_with_range(workflows, &test.next_workflow, &recursive_accepted_parts);
+            }
         }
         if !(current_attribute.0 + 1 < current_attribute.1) {
             return sum;
@@ -104,7 +109,7 @@ fn check_workflow_with_range(
     if workflow.fallback == "A" {
         sum += get_combinations(&current_accepted_parts);
     }
-    if workflow.fallback != "R" {
+    else if workflow.fallback != "R" {
         sum += check_workflow_with_range(workflows, &workflow.fallback, &current_accepted_parts)
     }
     sum
