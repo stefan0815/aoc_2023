@@ -19,8 +19,9 @@ extern crate test;
 // pub mod day15;
 // pub mod day16;
 // pub mod day17;
-pub mod day18;
+// pub mod day18;
+pub mod day19;
 
 fn main() {
-    day18::solver();
+    day19::solver();
 }
