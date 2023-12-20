@@ -179,7 +179,7 @@ fn solve_part_two(input: &Vec<String>) -> usize {
     let mut final_high_module_names: Vec<(String, bool)> = Vec::new();
     for (_, module) in &modules {
         if module.output.contains(&"rx".to_owned()) {
-            conjunction_modules.push((module.clone(), true));
+            conjunction_modules.push((module.clone(), false));
             break;
         }
     }
@@ -240,11 +240,12 @@ fn solve_part_two(input: &Vec<String>) -> usize {
                     .iter()
                     .all(|(_, high_pulse)| *high_pulse)
                 {
+                    println!("Module fullfilled: {}, button_presses: {button_presses}, output_goal: {output_goal}", module);
                     module_fulfills_output.insert(module.name.to_owned(), button_presses);
                 }
             }
         }
-        println!("module_fulfills_output:{} / {}", module_fulfills_output.len(), conjunction_modules.len());
+        // println!("module_fulfills_output:{} / {}", module_fulfills_output.len(), conjunction_modules.len());
         if module_fulfills_output.len() == conjunction_modules.len(){
             return module_fulfills_output.iter().map(|(_, button_presses)| *button_presses).fold(1, |a, b| a.lcm(&b));
         }
