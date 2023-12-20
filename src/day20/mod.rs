@@ -19,16 +19,16 @@ struct Module {
     name: String,
     input_memory: HashMap<String, bool>, // false: low pulse
     flip: bool,
-    fired: bool,
     output: Vec<String>,
 }
+
 impl fmt::Display for Module {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.prefix == '%' {
             return write!(
                 f,
-                "name: {}{}, flip: {}, fired: {}, output: {:?}",
-                self.prefix, self.name, self.flip, self.fired, self.output
+                "name: {}{}, flip: {}, output: {:?}",
+                self.prefix, self.name, self.flip, self.output
             );
         } else {
             let input_memory = self
@@ -38,8 +38,8 @@ impl fmt::Display for Module {
                 .collect::<Vec<(String, bool)>>();
             return write!(
                 f,
-                "name: {}{}, fired: {}, input: {:?}, output: {:?}",
-                self.prefix, self.name, self.fired, input_memory, self.output
+                "name: {}{}, input: {:?}, output: {:?}",
+                self.prefix, self.name, input_memory, self.output
             );
         }
     }
@@ -64,7 +64,6 @@ fn parse_input(input: &Vec<String>) -> (Vec<String>, HashMap<String, Module>) {
             name: name.to_owned(),
             input_memory: HashMap::new(),
             flip: false,
-            fired: false,
             output,
         };
         modules.insert(name, module);
@@ -102,9 +101,6 @@ fn process_button_press(
     let mut fullfilled: HashSet<String> = HashSet::new();
     let mut num_pulses: (usize, usize) = (0, 0);
     num_pulses.0 += 1;
-    for (_, module) in &mut *modules {
-        module.fired = false;
-    }
     let mut signals_to_process: VecDeque<Signal> = VecDeque::new();
     broadcaster.iter().for_each(|output| {
         signals_to_process.push_back(Signal {
@@ -115,7 +111,6 @@ fn process_button_press(
     });
     while !signals_to_process.is_empty() {
         let signal = signals_to_process.pop_front().unwrap();
-        // println!("signal: from: {}, to: {}, high_pulse: {}", signal.from, signal.to, signal.high_pulse);
 
         if signal.high_pulse {
             num_pulses.1 += 1;
@@ -126,11 +121,8 @@ fn process_button_press(
         if !modules.contains_key(&signal.to) {
             continue;
         }
-        // if !signal.high_pulse &&(signal.to == "jm" || signal.to == "jg" || signal.to == "hf" || signal.to == "rh")  {
-        //     println!("Low Signal to {}", signal.to);
-        // }
+
         let module = modules.get_mut(&signal.to).unwrap();
-        module.fired = true;
         if module.prefix == '%' {
             if signal.high_pulse {
                 continue;
