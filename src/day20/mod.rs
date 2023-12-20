@@ -1,7 +1,7 @@
 use num::Integer;
 use std::{
     collections::{HashMap, VecDeque},
-    fs,
+    fmt, fs,
 };
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -20,6 +20,28 @@ struct Module {
     input_memory: HashMap<String, bool>, // false: low pulse
     flip: bool,
     output: Vec<String>,
+}
+impl fmt::Display for Module {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.prefix == '%' {
+            return write!(
+                f,
+                "name: {}{}, flip: {}, output: {:?}",
+                self.prefix, self.name, self.flip, self.output
+            );
+        } else {
+            let input_memory = self
+                .input_memory
+                .iter()
+                .map(|(name, high_pulse)| (name.to_owned(), *high_pulse))
+                .collect::<Vec<(String, bool)>>();
+            return write!(
+                f,
+                "name: {}{}, input: {:?}, output: {:?}",
+                self.prefix, self.name, input_memory, self.output
+            );
+        }
+    }
 }
 
 fn parse_input(input: &Vec<String>) -> (Vec<String>, HashMap<String, Module>) {
@@ -70,68 +92,79 @@ fn parse_input(input: &Vec<String>) -> (Vec<String>, HashMap<String, Module>) {
     (broadcaster, modules)
 }
 
+fn process_button_press(
+    broadcaster: &Vec<String>,
+    modules: &mut HashMap<String, Module>,
+) -> (usize, usize) {
+    let mut num_pulses: (usize, usize) = (0, 0);
+    num_pulses.0 += 1;
+    let mut signals_to_process: VecDeque<Signal> = VecDeque::new();
+    broadcaster.iter().for_each(|output| {
+        signals_to_process.push_back(Signal {
+            from: "broadcaster".to_owned(),
+            to: output.to_owned(),
+            high_pulse: false,
+        });
+    });
+    while !signals_to_process.is_empty() {
+        let signal = signals_to_process.pop_front().unwrap();
+        // println!("signal: from: {}, to: {}, high_pulse: {}", signal.from, signal.to, signal.high_pulse);
+
+        if signal.high_pulse {
+            num_pulses.1 += 1;
+        } else {
+            num_pulses.0 += 1;
+        }
+        if !modules.contains_key(&signal.to) {
+            continue;
+        }
+        let module = modules.get_mut(&signal.to).unwrap();
+        if module.prefix == '%' {
+            if signal.high_pulse {
+                continue;
+            }
+            module.flip = !module.flip;
+            module.output.iter().for_each(|output| {
+                let next_signal = Signal {
+                    from: module.name.to_owned(),
+                    to: output.to_owned(),
+                    high_pulse: module.flip,
+                };
+                signals_to_process.push_back(next_signal);
+            });
+        } else {
+            if module.input_memory.contains_key(&signal.from) {
+                *module.input_memory.get_mut(&signal.from).unwrap() = signal.high_pulse;
+            }
+
+            let mut next_pulse: bool = false;
+            for (_, high_pulse_input) in &module.input_memory {
+                if !high_pulse_input {
+                    next_pulse = true;
+                    break;
+                }
+            }
+            module.output.iter().for_each(|output| {
+                let next_signal = Signal {
+                    from: module.name.to_owned(),
+                    to: output.to_owned(),
+                    high_pulse: next_pulse,
+                };
+                signals_to_process.push_back(next_signal);
+            });
+        }
+    }
+    num_pulses
+}
+
 fn solve_part_one(input: &Vec<String>) -> usize {
     let (broadcaster, mut modules) = parse_input(&input);
     let mut num_pulses: (usize, usize) = (0, 0);
 
     for _ in 0..1000 {
-        num_pulses.0 += 1;
-        let mut signals_to_process: VecDeque<Signal> = VecDeque::new();
-        broadcaster.iter().for_each(|output| {
-            signals_to_process.push_back(Signal {
-                from: "broadcaster".to_owned(),
-                to: output.to_owned(),
-                high_pulse: false,
-            });
-        });
-        while !signals_to_process.is_empty() {
-            let signal = signals_to_process.pop_front().unwrap();
-            // println!("signal: from: {}, to: {}, high_pulse: {}", signal.from, signal.to, signal.high_pulse);
-
-            if signal.high_pulse {
-                num_pulses.1 += 1;
-            } else {
-                num_pulses.0 += 1;
-            }
-            if !modules.contains_key(&signal.to) {
-                continue;
-            }
-            let module = modules.get_mut(&signal.to).unwrap();
-            if module.prefix == '%' {
-                if signal.high_pulse {
-                    continue;
-                }
-                module.flip = !module.flip;
-                module.output.iter().for_each(|output| {
-                    let next_signal = Signal {
-                        from: module.name.to_owned(),
-                        to: output.to_owned(),
-                        high_pulse: module.flip,
-                    };
-                    signals_to_process.push_back(next_signal);
-                });
-            } else {
-                if module.input_memory.contains_key(&signal.from) {
-                    *module.input_memory.get_mut(&signal.from).unwrap() = signal.high_pulse;
-                }
-
-                let mut next_pulse: bool = false;
-                for (_, high_pulse_input) in &module.input_memory {
-                    if !high_pulse_input {
-                        next_pulse = true;
-                        break;
-                    }
-                }
-                module.output.iter().for_each(|output| {
-                    let next_signal = Signal {
-                        from: module.name.to_owned(),
-                        to: output.to_owned(),
-                        high_pulse: next_pulse,
-                    };
-                    signals_to_process.push_back(next_signal);
-                });
-            }
-        }
+        let pulses = process_button_press(&broadcaster, &mut modules);
+        num_pulses.0 += pulses.0;
+        num_pulses.1 += pulses.1;
     }
     println!("count: {}, {}", num_pulses.0, num_pulses.1);
 
@@ -142,122 +175,79 @@ fn solve_part_two(input: &Vec<String>) -> usize {
     let (broadcaster, mut modules) = parse_input(&input);
     let mut button_presses: usize = 0;
 
-    let mut conjunction_modules: Vec<Module> = Vec::new();
-    let mut final_high_module_names: Vec<String> = Vec::new();
+    let mut conjunction_modules: Vec<(Module, bool)> = Vec::new();
+    let mut final_high_module_names: Vec<(String, bool)> = Vec::new();
     for (_, module) in &modules {
-        // println!("module.output: {:?}", module.output);
         if module.output.contains(&"rx".to_owned()) {
-            conjunction_modules.push(module.clone());
+            conjunction_modules.push((module.clone(), true));
             break;
         }
     }
-
+    let mut previous_conjunction_modules: Vec<(Module, bool)> = Vec::new();
     while !conjunction_modules.is_empty() {
-        // println!(
-        //     "conjunction_modules: {:?}",
-        //     conjunction_modules
-        //         .iter()
-        //         .map(|module| module.name.to_owned())
-        //         .collect::<Vec<String>>()
-        // );
-        let mut next_conjunction_modules: Vec<Module> = Vec::new();
-        for module in &conjunction_modules {
+        let mut next_conjunction_modules: Vec<(Module, bool)> = Vec::new();
+        for (module, output_goal) in &conjunction_modules {
             if module.input_memory.is_empty() {
-                if !final_high_module_names.contains(&module.name){
-                    final_high_module_names.push(module.name.to_owned());
+                if !final_high_module_names.contains(&(module.name.to_owned(), !*output_goal)) {
+                    final_high_module_names.push((module.name.to_owned(), !*output_goal));
                 }
             } else {
                 for (input_module_name, _) in &module.input_memory {
-                    next_conjunction_modules.push(modules[input_module_name].clone());
+                    next_conjunction_modules
+                        .push((modules[input_module_name].clone(), !*output_goal));
                 }
             }
         }
+        if next_conjunction_modules.is_empty() {
+            conjunction_modules = previous_conjunction_modules;
+            break;
+        }
+        previous_conjunction_modules = conjunction_modules;
         conjunction_modules = next_conjunction_modules;
     }
 
-    println!("final_high_module_names: {:?}", final_high_module_names);
-    let mut module_high_for_the_first_time: HashMap<String, usize> =  HashMap::new();
+    // for (conjunction_module, output_goal) in &conjunction_modules {
+    //     println!(
+    //         "conjunction_modules: {}, output_goal: {output_goal}",
+    //         conjunction_module
+    //     );
+    // }
+    // println!("final_high_module_names: {:?}", final_high_module_names);
+    let mut module_fulfills_output: HashMap<String, usize> = HashMap::new();
 
     loop {
         button_presses += 1;
-        let mut signals_to_process: VecDeque<Signal> = VecDeque::new();
-        broadcaster.iter().for_each(|output| {
-            signals_to_process.push_back(Signal {
-                from: "broadcaster".to_owned(),
-                to: output.to_owned(),
-                high_pulse: false,
-            });
-        });
-        while !signals_to_process.is_empty() {
-            let signal = signals_to_process.pop_front().unwrap();
-            // println!("signal: from: {}, to: {}, high_pulse: {}", signal.from, signal.to, signal.high_pulse);
+        process_button_press(&broadcaster, &mut modules);
 
-            if signal.to == "rx" {
-                if !signal.high_pulse {
-                    return button_presses;
+        for (module, output_goal) in &conjunction_modules {
+            let module = &modules[&module.name];
+            if *output_goal {
+                if !module
+                    .input_memory
+                    .iter()
+                    .all(|(_, high_pulse)| *high_pulse)
+                    && module
+                        .input_memory
+                        .iter()
+                        .any(|(_, high_pulse)| *high_pulse)
+                {
+                    println!("Module fullfilled: {}, button_presses: {button_presses}, output_goal: {output_goal}", module);
+                    module_fulfills_output.insert(module.name.to_owned(), button_presses);
                 }
-                continue;
-            }
-
-            let module = modules.get_mut(&signal.to).unwrap();
-            if module.prefix == '%' {
-                if signal.high_pulse {
-                    continue;
-                }
-                module.flip = !module.flip;
-                module.output.iter().for_each(|output| {
-                    let next_signal = Signal {
-                        from: module.name.to_owned(),
-                        to: output.to_owned(),
-                        high_pulse: module.flip,
-                    };
-                    signals_to_process.push_back(next_signal);
-                });
             } else {
-                if module.input_memory.contains_key(&signal.from) {
-                    *module.input_memory.get_mut(&signal.from).unwrap() = signal.high_pulse;
+                if module
+                    .input_memory
+                    .iter()
+                    .all(|(_, high_pulse)| *high_pulse)
+                {
+                    module_fulfills_output.insert(module.name.to_owned(), button_presses);
                 }
-
-                let mut next_pulse: bool = false;
-                for (_, high_pulse_input) in &module.input_memory {
-                    if !high_pulse_input {
-                        next_pulse = true;
-                        break;
-                    }
-                }
-                module.output.iter().for_each(|output| {
-                    let next_signal = Signal {
-                        from: module.name.to_owned(),
-                        to: output.to_owned(),
-                        high_pulse: next_pulse,
-                    };
-                    signals_to_process.push_back(next_signal);
-                });
             }
         }
-        for module_name in &final_high_module_names {
-            if modules[module_name].flip && !module_high_for_the_first_time.contains_key(module_name) {
-                module_high_for_the_first_time.insert(module_name.to_owned(), button_presses);
-            }
+        println!("module_fulfills_output:{} / {}", module_fulfills_output.len(), conjunction_modules.len());
+        if module_fulfills_output.len() == conjunction_modules.len(){
+            return module_fulfills_output.iter().map(|(_, button_presses)| *button_presses).fold(1, |a, b| a.lcm(&b));
         }
-        println!("module_high_for_the_first_time: {:?}", module_high_for_the_first_time);
-        if module_high_for_the_first_time.len() == final_high_module_names.len() {
-            return module_high_for_the_first_time.iter().map(|(_, val)| *val).fold(1, |a, b| a.lcm(&b))
-        }
-        // for (name, module) in &modules {
-        //     if module.output.contains(&"rx".to_owned()) {
-        //         if module.input_memory.iter().any(|(_, high_pulse)| *high_pulse) {
-        //             print!("Buttons pressed: {button_presses}, Module: {name}, Input Memory: [");
-        //             module
-        //                 .input_memory
-        //                 .iter()
-        //                 .for_each(|(input_module, high_pulse)| {
-        //                     print!("{input_module}:{high_pulse}, ");
-        //                 });
-        //             println!("]");
-        //         }
-        //     }
-        // }
     }
 }
 
