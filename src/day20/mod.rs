@@ -1,3 +1,4 @@
+use num::Integer;
 use std::{
     collections::{HashMap, VecDeque},
     fs,
@@ -141,6 +142,42 @@ fn solve_part_two(input: &Vec<String>) -> usize {
     let (broadcaster, mut modules) = parse_input(&input);
     let mut button_presses: usize = 0;
 
+    let mut conjunction_modules: Vec<Module> = Vec::new();
+    let mut final_high_module_names: Vec<String> = Vec::new();
+    for (_, module) in &modules {
+        // println!("module.output: {:?}", module.output);
+        if module.output.contains(&"rx".to_owned()) {
+            conjunction_modules.push(module.clone());
+            break;
+        }
+    }
+
+    while !conjunction_modules.is_empty() {
+        // println!(
+        //     "conjunction_modules: {:?}",
+        //     conjunction_modules
+        //         .iter()
+        //         .map(|module| module.name.to_owned())
+        //         .collect::<Vec<String>>()
+        // );
+        let mut next_conjunction_modules: Vec<Module> = Vec::new();
+        for module in &conjunction_modules {
+            if module.input_memory.is_empty() {
+                if !final_high_module_names.contains(&module.name){
+                    final_high_module_names.push(module.name.to_owned());
+                }
+            } else {
+                for (input_module_name, _) in &module.input_memory {
+                    next_conjunction_modules.push(modules[input_module_name].clone());
+                }
+            }
+        }
+        conjunction_modules = next_conjunction_modules;
+    }
+
+    println!("final_high_module_names: {:?}", final_high_module_names);
+    let mut module_high_for_the_first_time: HashMap<String, usize> =  HashMap::new();
+
     loop {
         button_presses += 1;
         let mut signals_to_process: VecDeque<Signal> = VecDeque::new();
@@ -197,6 +234,15 @@ fn solve_part_two(input: &Vec<String>) -> usize {
                     signals_to_process.push_back(next_signal);
                 });
             }
+        }
+        for module_name in &final_high_module_names {
+            if modules[module_name].flip && !module_high_for_the_first_time.contains_key(module_name) {
+                module_high_for_the_first_time.insert(module_name.to_owned(), button_presses);
+            }
+        }
+        println!("module_high_for_the_first_time: {:?}", module_high_for_the_first_time);
+        if module_high_for_the_first_time.len() == final_high_module_names.len() {
+            return module_high_for_the_first_time.iter().map(|(_, val)| *val).fold(1, |a, b| a.lcm(&b))
         }
         // for (name, module) in &modules {
         //     if module.output.contains(&"rx".to_owned()) {
