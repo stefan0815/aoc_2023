@@ -19,6 +19,7 @@ struct Module {
     name: String,
     input_memory: HashMap<String, bool>, // false: low pulse
     flip: bool,
+    fired: bool,
     output: Vec<String>,
 }
 impl fmt::Display for Module {
@@ -26,8 +27,8 @@ impl fmt::Display for Module {
         if self.prefix == '%' {
             return write!(
                 f,
-                "name: {}{}, flip: {}, output: {:?}",
-                self.prefix, self.name, self.flip, self.output
+                "name: {}{}, flip: {}, fired: {}, output: {:?}",
+                self.prefix, self.name, self.flip, self.fired, self.output
             );
         } else {
             let input_memory = self
@@ -37,8 +38,8 @@ impl fmt::Display for Module {
                 .collect::<Vec<(String, bool)>>();
             return write!(
                 f,
-                "name: {}{}, input: {:?}, output: {:?}",
-                self.prefix, self.name, input_memory, self.output
+                "name: {}{}, fired: {}, input: {:?}, output: {:?}",
+                self.prefix, self.name, self.fired, input_memory, self.output
             );
         }
     }
@@ -63,6 +64,7 @@ fn parse_input(input: &Vec<String>) -> (Vec<String>, HashMap<String, Module>) {
             name: name.to_owned(),
             input_memory: HashMap::new(),
             flip: false,
+            fired: false,
             output,
         };
         modules.insert(name, module);
@@ -98,6 +100,9 @@ fn process_button_press(
 ) -> (usize, usize) {
     let mut num_pulses: (usize, usize) = (0, 0);
     num_pulses.0 += 1;
+    for (_, module) in &mut *modules{
+        module.fired = false;
+    }
     let mut signals_to_process: VecDeque<Signal> = VecDeque::new();
     broadcaster.iter().for_each(|output| {
         signals_to_process.push_back(Signal {
@@ -118,7 +123,11 @@ fn process_button_press(
         if !modules.contains_key(&signal.to) {
             continue;
         }
+        // if !signal.high_pulse &&(signal.to == "jm" || signal.to == "jg" || signal.to == "hf" || signal.to == "rh")  {
+        //     println!("Low Signal to {}", signal.to);
+        // }
         let module = modules.get_mut(&signal.to).unwrap();
+        module.fired = true;
         if module.prefix == '%' {
             if signal.high_pulse {
                 continue;
@@ -184,7 +193,7 @@ fn solve_part_two(input: &Vec<String>) -> usize {
         }
     }
     let mut previous_conjunction_modules: Vec<(Module, bool)> = Vec::new();
-    while !conjunction_modules.is_empty() {
+    for _ in 0..1 {
         let mut next_conjunction_modules: Vec<(Module, bool)> = Vec::new();
         for (module, output_goal) in &conjunction_modules {
             if module.input_memory.is_empty() {
@@ -206,36 +215,41 @@ fn solve_part_two(input: &Vec<String>) -> usize {
         conjunction_modules = next_conjunction_modules;
     }
 
-    // for (conjunction_module, output_goal) in &conjunction_modules {
-    //     println!(
-    //         "conjunction_modules: {}, output_goal: {output_goal}",
-    //         conjunction_module
-    //     );
-    // }
+    for (conjunction_module, output_goal) in &conjunction_modules {
+        println!(
+            "conjunction_modules: {}, output_goal: {output_goal}",
+            conjunction_module
+        );
+    }
     // println!("final_high_module_names: {:?}", final_high_module_names);
     let mut module_fulfills_output: HashMap<String, usize> = HashMap::new();
 
-    loop {
+    while button_presses < 100000 {
         button_presses += 1;
+        // for (module, output_goal) in &conjunction_modules {
+        //     let module = &modules[&module.name];
+        //     println!("module: {module}, output_goal: {output_goal}");
+        // }
         process_button_press(&broadcaster, &mut modules);
-
+        // for (module, output_goal) in &conjunction_modules {
+        //     let module = &modules[&module.name];
+        //     println!("module: {module}, output_goal: {output_goal}");
+        // }
+        // println!("{button_presses}");
         for (module, output_goal) in &conjunction_modules {
             let module = &modules[&module.name];
+            // println!("module: {module}, output_goal: {output_goal}");
             if *output_goal {
-                if !module
+                if module.fired && !module
                     .input_memory
                     .iter()
                     .all(|(_, high_pulse)| *high_pulse)
-                    && module
-                        .input_memory
-                        .iter()
-                        .any(|(_, high_pulse)| *high_pulse)
                 {
                     println!("Module fullfilled: {}, button_presses: {button_presses}, output_goal: {output_goal}", module);
                     module_fulfills_output.insert(module.name.to_owned(), button_presses);
                 }
             } else {
-                if module
+                if module.fired && module
                     .input_memory
                     .iter()
                     .all(|(_, high_pulse)| *high_pulse)
@@ -250,6 +264,7 @@ fn solve_part_two(input: &Vec<String>) -> usize {
             return module_fulfills_output.iter().map(|(_, button_presses)| *button_presses).fold(1, |a, b| a.lcm(&b));
         }
     }
+    0
 }
 
 fn get_input(file: &str) -> Vec<String> {
