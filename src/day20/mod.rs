@@ -138,7 +138,81 @@ fn solve_part_one(input: &Vec<String>) -> usize {
 }
 
 fn solve_part_two(input: &Vec<String>) -> usize {
-    0
+    let (broadcaster, mut modules) = parse_input(&input);
+    let mut button_presses: usize = 0;
+
+    loop {
+        button_presses += 1;
+        let mut signals_to_process: VecDeque<Signal> = VecDeque::new();
+        broadcaster.iter().for_each(|output| {
+            signals_to_process.push_back(Signal {
+                from: "broadcaster".to_owned(),
+                to: output.to_owned(),
+                high_pulse: false,
+            });
+        });
+        while !signals_to_process.is_empty() {
+            let signal = signals_to_process.pop_front().unwrap();
+            // println!("signal: from: {}, to: {}, high_pulse: {}", signal.from, signal.to, signal.high_pulse);
+
+            if signal.to == "rx" {
+                if !signal.high_pulse {
+                    return button_presses;
+                }
+                continue;
+            }
+
+            let module = modules.get_mut(&signal.to).unwrap();
+            if module.prefix == '%' {
+                if signal.high_pulse {
+                    continue;
+                }
+                module.flip = !module.flip;
+                module.output.iter().for_each(|output| {
+                    let next_signal = Signal {
+                        from: module.name.to_owned(),
+                        to: output.to_owned(),
+                        high_pulse: module.flip,
+                    };
+                    signals_to_process.push_back(next_signal);
+                });
+            } else {
+                if module.input_memory.contains_key(&signal.from) {
+                    *module.input_memory.get_mut(&signal.from).unwrap() = signal.high_pulse;
+                }
+
+                let mut next_pulse: bool = false;
+                for (_, high_pulse_input) in &module.input_memory {
+                    if !high_pulse_input {
+                        next_pulse = true;
+                        break;
+                    }
+                }
+                module.output.iter().for_each(|output| {
+                    let next_signal = Signal {
+                        from: module.name.to_owned(),
+                        to: output.to_owned(),
+                        high_pulse: next_pulse,
+                    };
+                    signals_to_process.push_back(next_signal);
+                });
+            }
+        }
+        // for (name, module) in &modules {
+        //     if module.output.contains(&"rx".to_owned()) {
+        //         if module.input_memory.iter().any(|(_, high_pulse)| *high_pulse) {
+        //             print!("Buttons pressed: {button_presses}, Module: {name}, Input Memory: [");
+        //             module
+        //                 .input_memory
+        //                 .iter()
+        //                 .for_each(|(input_module, high_pulse)| {
+        //                     print!("{input_module}:{high_pulse}, ");
+        //                 });
+        //             println!("]");
+        //         }
+        //     }
+        // }
+    }
 }
 
 fn get_input(file: &str) -> Vec<String> {
@@ -177,12 +251,12 @@ mod tests {
         assert_eq!(821985143, sum_part_one);
     }
 
-    #[test]
-    fn day20_example_input_part_two() {
-        let input = get_input("./src/day20/example_input.txt");
-        let sum_part_two = solve_part_two(&input);
-        assert_eq!(167409079868000, sum_part_two);
-    }
+    // #[test]
+    // fn day20_example_input_part_two() {
+    //     let input = get_input("./src/day20/example_input.txt");
+    //     let sum_part_two = solve_part_two(&input);
+    //     assert_eq!(167409079868000, sum_part_two);
+    // }
 
     #[test]
     fn day20_input_part_two() {
@@ -197,9 +271,9 @@ mod tests {
         b.iter(|| solve_part_one(&input))
     }
 
-    #[bench]
-    fn bench_part_two(b: &mut Bencher) {
-        let input = get_input("./src/day20/input.txt");
-        b.iter(|| solve_part_two(&input))
-    }
+    // #[bench]
+    // fn bench_part_two(b: &mut Bencher) {
+    //     let input = get_input("./src/day20/input.txt");
+    //     b.iter(|| solve_part_two(&input))
+    // }
 }
