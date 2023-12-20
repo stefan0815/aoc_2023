@@ -1,6 +1,6 @@
 use num::Integer;
 use std::{
-    collections::{HashMap, VecDeque},
+    collections::{HashMap, HashSet, VecDeque},
     fmt, fs,
 };
 
@@ -97,10 +97,12 @@ fn parse_input(input: &Vec<String>) -> (Vec<String>, HashMap<String, Module>) {
 fn process_button_press(
     broadcaster: &Vec<String>,
     modules: &mut HashMap<String, Module>,
-) -> (usize, usize) {
+    module_name_of_interest: &String,
+) -> ((usize, usize), HashSet<String>) {
+    let mut fullfilled: HashSet<String> = HashSet::new();
     let mut num_pulses: (usize, usize) = (0, 0);
     num_pulses.0 += 1;
-    for (_, module) in &mut *modules{
+    for (_, module) in &mut *modules {
         module.fired = false;
     }
     let mut signals_to_process: VecDeque<Signal> = VecDeque::new();
@@ -120,6 +122,7 @@ fn process_button_press(
         } else {
             num_pulses.0 += 1;
         }
+
         if !modules.contains_key(&signal.to) {
             continue;
         }
@@ -162,8 +165,15 @@ fn process_button_press(
                 signals_to_process.push_back(next_signal);
             });
         }
+        if signal.to == *module_name_of_interest {
+            for (memory_module_name, memory_high_pulse) in &module.input_memory {
+                if *memory_high_pulse {
+                    fullfilled.insert(memory_module_name.to_owned());
+                }
+            }
+        }
     }
-    num_pulses
+    (num_pulses, fullfilled)
 }
 
 fn solve_part_one(input: &Vec<String>) -> usize {
@@ -171,7 +181,7 @@ fn solve_part_one(input: &Vec<String>) -> usize {
     let mut num_pulses: (usize, usize) = (0, 0);
 
     for _ in 0..1000 {
-        let pulses = process_button_press(&broadcaster, &mut modules);
+        let (pulses, _) = process_button_press(&broadcaster, &mut modules, &"".to_owned());
         num_pulses.0 += pulses.0;
         num_pulses.1 += pulses.1;
     }
@@ -185,86 +195,31 @@ fn solve_part_two(input: &Vec<String>) -> usize {
     let mut button_presses: usize = 0;
 
     let mut conjunction_modules: Vec<(Module, bool)> = Vec::new();
-    let mut final_high_module_names: Vec<(String, bool)> = Vec::new();
+    let mut pre_goal_module: Option<String> = None;
+    let mut pre_goal_input_length: Option<usize> = None;
     for (_, module) in &modules {
         if module.output.contains(&"rx".to_owned()) {
             conjunction_modules.push((module.clone(), false));
+            pre_goal_module = Some(module.name.to_owned());
+            pre_goal_input_length = Some(module.input_memory.len());
             break;
         }
     }
-    let mut previous_conjunction_modules: Vec<(Module, bool)> = Vec::new();
-    for _ in 0..1 {
-        let mut next_conjunction_modules: Vec<(Module, bool)> = Vec::new();
-        for (module, output_goal) in &conjunction_modules {
-            if module.input_memory.is_empty() {
-                if !final_high_module_names.contains(&(module.name.to_owned(), !*output_goal)) {
-                    final_high_module_names.push((module.name.to_owned(), !*output_goal));
-                }
-            } else {
-                for (input_module_name, _) in &module.input_memory {
-                    next_conjunction_modules
-                        .push((modules[input_module_name].clone(), !*output_goal));
-                }
-            }
-        }
-        if next_conjunction_modules.is_empty() {
-            conjunction_modules = previous_conjunction_modules;
-            break;
-        }
-        previous_conjunction_modules = conjunction_modules;
-        conjunction_modules = next_conjunction_modules;
-    }
-
-    for (conjunction_module, output_goal) in &conjunction_modules {
-        println!(
-            "conjunction_modules: {}, output_goal: {output_goal}",
-            conjunction_module
-        );
-    }
-    // println!("final_high_module_names: {:?}", final_high_module_names);
-    let mut module_fulfills_output: HashMap<String, usize> = HashMap::new();
-
-    while button_presses < 100000 {
+    let pre_goal_module = pre_goal_module.unwrap();
+    let pre_goal_input_length = pre_goal_input_length.unwrap();
+    // println!("{pre_goal_module}");
+    let mut fulfilled_input: HashMap<String, usize> = HashMap::new();
+    loop {
         button_presses += 1;
-        // for (module, output_goal) in &conjunction_modules {
-        //     let module = &modules[&module.name];
-        //     println!("module: {module}, output_goal: {output_goal}");
-        // }
-        process_button_press(&broadcaster, &mut modules);
-        // for (module, output_goal) in &conjunction_modules {
-        //     let module = &modules[&module.name];
-        //     println!("module: {module}, output_goal: {output_goal}");
-        // }
-        // println!("{button_presses}");
-        for (module, output_goal) in &conjunction_modules {
-            let module = &modules[&module.name];
-            // println!("module: {module}, output_goal: {output_goal}");
-            if *output_goal {
-                if module.fired && !module
-                    .input_memory
-                    .iter()
-                    .all(|(_, high_pulse)| *high_pulse)
-                {
-                    println!("Module fullfilled: {}, button_presses: {button_presses}, output_goal: {output_goal}", module);
-                    module_fulfills_output.insert(module.name.to_owned(), button_presses);
-                }
-            } else {
-                if module.fired && module
-                    .input_memory
-                    .iter()
-                    .all(|(_, high_pulse)| *high_pulse)
-                {
-                    println!("Module fullfilled: {}, button_presses: {button_presses}, output_goal: {output_goal}", module);
-                    module_fulfills_output.insert(module.name.to_owned(), button_presses);
-                }
-            }
+        let (_, fulfilled_input_modules) =
+            process_button_press(&broadcaster, &mut modules, &pre_goal_module);
+        for fulfilled_input_module in fulfilled_input_modules {
+            fulfilled_input.insert(fulfilled_input_module, button_presses);
         }
-        // println!("module_fulfills_output:{} / {}", module_fulfills_output.len(), conjunction_modules.len());
-        if module_fulfills_output.len() == conjunction_modules.len(){
-            return module_fulfills_output.iter().map(|(_, button_presses)| *button_presses).fold(1, |a, b| a.lcm(&b));
+        if fulfilled_input.len() == pre_goal_input_length {
+            return fulfilled_input.iter().map(|(_, val)| *val).fold(1, |a, b| a.lcm(&b));
         }
     }
-    0
 }
 
 fn get_input(file: &str) -> Vec<String> {
@@ -314,7 +269,7 @@ mod tests {
     fn day20_input_part_two() {
         let input = get_input("./src/day20/input.txt");
         let sum_part_two = solve_part_two(&input);
-        assert_eq!(130303473508222, sum_part_two);
+        assert_eq!(240853834793347, sum_part_two);
     }
 
     #[bench]
