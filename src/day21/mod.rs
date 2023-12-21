@@ -45,7 +45,7 @@ fn get_neighbours(input: &Vec<Vec<char>>, pos: &(usize, usize)) -> Vec<(usize, u
     neighbors
 }
 
-fn convert_pos (input_size: &(usize, usize), pos: &(i128, i128)) -> (usize, usize) {
+fn convert_pos(input_size: &(usize, usize), pos: &(i128, i128)) -> (usize, usize) {
     let mut row = pos.0;
     if pos.0 < 0 {
         let multiple = (-pos.0) as usize / input_size.0;
@@ -63,17 +63,15 @@ fn convert_pos (input_size: &(usize, usize), pos: &(i128, i128)) -> (usize, usiz
 }
 
 fn get_neighbours_part_two(input: &Vec<Vec<char>>, pos: &(i128, i128)) -> Vec<(i128, i128)> {
-    let possible_neighbors: Vec<(i128, i128)> = vec![
-        (pos.0 - 1, pos.1),
-        (pos.0 + 1, pos.1),
-        (pos.0, pos.1 - 1),
-        (pos.0, pos.1 + 1),
-    ];
+    let possible_neighbors: Vec<(i128, i128)> = vec![(1, 0), (-1, 0), (0, 1), (0, -1)];
     let mut neighbors: Vec<(i128, i128)> = Vec::new();
-    possible_neighbors.iter().for_each(|pos| {
-        let converted_pos = convert_pos(&(input.len(), input[0].len()), pos);
+    possible_neighbors.iter().for_each(|delta| {
+        let converted_pos = convert_pos(
+            &(input.len(), input[0].len()),
+            &(pos.0 + delta.0, pos.1 + delta.1),
+        );
         if input[converted_pos.0][converted_pos.1] != '#' {
-            neighbors.push(*pos);
+            neighbors.push(*delta);
         }
     });
     neighbors
@@ -84,6 +82,7 @@ fn solve_part_one(input: &Vec<Vec<char>>, steps: usize) -> usize {
     let mut current_positions: HashSet<(usize, usize)> = HashSet::new();
     let mut neighbours: HashMap<(usize, usize), Vec<(usize, usize)>> = HashMap::new();
     current_positions.insert(start);
+    let mut results : Vec<usize> = Vec::new();
 
     for _ in 0..steps {
         let mut next_positions: HashSet<(usize, usize)> = HashSet::new();
@@ -96,28 +95,35 @@ fn solve_part_one(input: &Vec<Vec<char>>, steps: usize) -> usize {
             });
         });
         current_positions = next_positions;
+        results.push(current_positions.len());
     }
+    println!("{:?}", results);
+
     current_positions.len()
 }
 
 fn solve_part_two(input: &Vec<Vec<char>>, steps: usize) -> usize {
     let start = find_start(input);
-    let mut current_positions: HashSet<(i128,i128)> = HashSet::new();
-    let mut neighbours: HashMap<(i128,i128), Vec<(i128,i128)>> = HashMap::new();
+    let mut current_positions: HashSet<(i128, i128)> = HashSet::new();
+    let mut neighbours_delta: HashMap<(usize, usize), Vec<(i128, i128)>> = HashMap::new();
     current_positions.insert((start.0 as i128, start.1 as i128));
 
+    let mut results : Vec<usize> = Vec::new();
     for _ in 0..steps {
-        let mut next_positions: HashSet<(i128,i128)> = HashSet::new();
+        let mut next_positions: HashSet<(i128, i128)> = HashSet::new();
         current_positions.iter().for_each(|pos| {
-            if !neighbours.contains_key(pos) {
-                neighbours.insert(*pos, get_neighbours_part_two(input, pos));
+            let converted_pos = convert_pos(&(input.len(), input[0].len()), pos);
+            if !neighbours_delta.contains_key(&converted_pos) {
+                neighbours_delta.insert(converted_pos, get_neighbours_part_two(input, pos));
             }
-            neighbours[pos].iter().for_each(|next_pos| {
-                next_positions.insert(*next_pos);
+            neighbours_delta[&converted_pos].iter().for_each(|delta| {
+                next_positions.insert((pos.0 + delta.0, pos.1 + delta.1));
             });
         });
         current_positions = next_positions;
+        results.push(current_positions.len());
     }
+    println!("{:?}", results);
     current_positions.len()
 }
 
@@ -154,6 +160,13 @@ mod tests {
     fn day21_input_part_one() {
         let input = get_input("./src/day21/input.txt");
         let sum_part_one = solve_part_one(&input, 64);
+        assert_eq!(3649, sum_part_one);
+    }
+
+    #[test]
+    fn day21_input_part_one_500_steps() {
+        let input = get_input("./src/day21/input.txt");
+        let sum_part_one = solve_part_one(&input, 500);
         assert_eq!(3649, sum_part_one);
     }
 
