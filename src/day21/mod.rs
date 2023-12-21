@@ -133,7 +133,10 @@ fn get_result(
         result += world.last_result;
     }
 
-    let start_world = finished_worlds[&(0, 0)];
+    let mut start_world = (0,0);
+    if finished_worlds.contains_key(&(0,0)){
+        start_world = finished_worlds[&(0, 0)];
+    }
     for (world_pos, (result_even, result_odd)) in finished_worlds {
         if step_is_even {
             println!(
