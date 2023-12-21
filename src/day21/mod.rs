@@ -119,9 +119,9 @@ fn get_result(
     worlds: &HashMap<(i128, i128), World>,
     finished_worlds: &HashMap<(i128, i128), (usize, usize)>,
     step_is_even: bool,
-) -> (usize, usize) {
+) -> (usize, (usize, usize)) {
+    println!("get_result start");
     let mut result = 0;
-    let mut finished_world_result: usize = 0;
     for (world_pos, world) in worlds {
         if finished_worlds.contains_key(&world_pos) {
             continue;
@@ -132,31 +132,48 @@ fn get_result(
         );
         result += world.last_result;
     }
-    for (_, (result_even, result_odd)) in finished_worlds {
+
+    let start_world = finished_worlds[&(0, 0)];
+    for (world_pos, (result_even, result_odd)) in finished_worlds {
         if step_is_even {
-            finished_world_result = *result_even;
+            println!(
+                "Even Finished world: ({}, {}) has result: {}",
+                world_pos.0, world_pos.1, result_even
+            );
             result += result_even;
         } else {
-            finished_world_result = *result_odd;
+            println!(
+                "Odd Finished world: ({}, {}) has result: {}",
+                world_pos.0, world_pos.1, result_odd
+            );
             result += result_odd;
         }
     }
-    (result, finished_world_result)
+    println!("get_result end: result: {result}, start_world: ({},{})", start_world.0, start_world.1);
+
+    (result, start_world)
 }
 
-fn calculate_multiple_worlds(multiple: usize) -> (usize, usize) {
+fn calculate_multiple_worlds(multiple: usize) -> (usize, usize, (usize, usize)) {
     if multiple == 1 {
-        return (1, 1);
+        return (1, 1, (1, 0));
     }
     let mut finished_worlds: Vec<usize> = vec![1, 4];
-
-    for _ in 2..multiple {
-        finished_worlds.push(finished_worlds.last().unwrap() + 4);
+    let mut similar_to_start = (1, 4); // similar_to_start.0 how many finished worlds have the same flip as first finished world
+    for i in 2..multiple {
+        let next_layer = finished_worlds.last().unwrap() + 4;
+        if i.is_even() {
+            similar_to_start.0 += next_layer;
+        } else {
+            similar_to_start.1 += next_layer;
+        }
+        finished_worlds.push(next_layer);
         // println!("multiple: {i}, finished_worlds : {}", finished_worlds.iter().sum::<usize>());
     }
     (
         finished_worlds.iter().sum(),
         *finished_worlds.last().unwrap(),
+        similar_to_start,
     )
 }
 
@@ -311,26 +328,23 @@ fn solve_part_two(input: &Vec<Vec<char>>, steps: usize, finish_cycle: usize) -> 
         }
 
         worlds = new_worlds;
-        if finish_cycle > 0 {
+        if finish_cycle > 1 {
             if step == finish_cycle {
-                let result = get_result(&worlds, &finished_worlds, step.is_even());
+                let (result, (even, odd)) = get_result(&worlds, &finished_worlds, step.is_even());
                 println!(
-                    "Step {step} current result 1 finished world: {}, One world: {}",
-                    result.0, result.1
+                    "Step {step} current result 1 finished world: {result}, One world: even: {even}, odd: {odd}"
                 );
             }
             if step == 2 * finish_cycle {
-                let result = get_result(&worlds, &finished_worlds, step.is_even());
+                let (result, (even, odd)) = get_result(&worlds, &finished_worlds, step.is_even());
                 println!(
-                    "Step {step} current result 5 finished world: {}, One world: {}",
-                    result.0, result.1
+                    "Step {step} current result 5 finished world: {result}, One world: even: {even}, odd: {odd}"
                 );
             }
             if step == 3 * finish_cycle {
-                let result = get_result(&worlds, &finished_worlds, step.is_even());
+                let (result, (even, odd)) = get_result(&worlds, &finished_worlds, step.is_even());
                 println!(
-                    "Step {step} current result 13 finished world: {}, One world: {}",
-                    result.0, result.1
+                    "Step {step} current result 13 finished world: {result}, One world: even: {even}, odd: {odd}"
                 );
             }
         }
@@ -338,15 +352,23 @@ fn solve_part_two(input: &Vec<Vec<char>>, steps: usize, finish_cycle: usize) -> 
 
     if finish_cycle > 1 {
         let multiple = (steps - left_over) / finish_cycle;
-        let (multiple_finished_worlds, last_step) = calculate_multiple_worlds(multiple);
-        println!("multiple: {multiple}, possibly_finished_worlds : {multiple_finished_worlds}");
+        let (
+            multiple_finished_worlds,
+            last_step,
+            (num_worlds_similar_to_start, num_worlds_different_to_start),
+        ) = calculate_multiple_worlds(multiple);
+        println!("multiple: {multiple}, possibly_finished_worlds : {multiple_finished_worlds}, world similarity: ({num_worlds_similar_to_start}, {num_worlds_different_to_start})");
         let corner_multiple = last_step / 4;
         println!("corner_multiple: {corner_multiple}");
         let diag_corner_multiple = corner_multiple + 1;
         println!("diag_corner_multiple: {diag_corner_multiple}");
 
-        let (_, one_world_result) = get_result(&worlds, &finished_worlds, multiple.is_odd());
-        println!("{one_world_result}");
+        let (_, start_world_even_odd_behaviour) =
+            get_result(&worlds, &finished_worlds, steps.is_even());
+        println!(
+            "start_world_even_odd_behaviour: ({}, {})",
+            start_world_even_odd_behaviour.0, start_world_even_odd_behaviour.1
+        );
         let left = worlds[&(0, -2)].last_result; //5678;
         let right = worlds[&(0, 2)].last_result; //5674;
         let up = worlds[&(-2, 0)].last_result; //5678;
@@ -374,7 +396,33 @@ fn solve_part_two(input: &Vec<Vec<char>>, steps: usize, finish_cycle: usize) -> 
         println!("{top_left_left} == {top_left_right}");
         assert_eq!(top_left_left, top_left_right);
 
-        return multiple_finished_worlds * one_world_result
+        // println!(
+        //     "{multiple_finished_worlds} * {one_world_result}
+        // + {left}
+        // + {right}
+        // + {up}
+        // + {down}
+        // + {top_left} * {corner_multiple}
+        // + {top_right} * {corner_multiple}
+        // + {bottom_left} * {corner_multiple}
+        // + {bottom_right} * {corner_multiple}
+        // + {bottom_right_right} * {diag_corner_multiple}
+        // + {bottom_left_right} * {diag_corner_multiple}
+        // + {top_right_right} * {diag_corner_multiple}
+        // + {top_left_right} * {diag_corner_multiple}"
+        // );
+        let mut finished_world_result = 0;
+        if steps.is_even() {
+            finished_world_result += num_worlds_similar_to_start * start_world_even_odd_behaviour.0;
+            finished_world_result +=
+                num_worlds_different_to_start * start_world_even_odd_behaviour.1;
+        } else {
+            finished_world_result += num_worlds_similar_to_start * start_world_even_odd_behaviour.1;
+            finished_world_result +=
+                num_worlds_different_to_start * start_world_even_odd_behaviour.0;
+        }
+        println!("Steps: {steps}, finished_world_result: {finished_world_result}");
+        return finished_world_result
             + left
             + right
             + up
@@ -488,7 +536,7 @@ mod tests {
         let input = get_input("./src/day21/input.txt");
         let sum_part_two = solve_part_two(&input, 2 * 131 + 65, 131);
         assert_eq!(
-            5 * 7457
+            (1 * 7520 + 4 * 7457)
                 + 5678
                 + 5678
                 + 5674
@@ -506,11 +554,23 @@ mod tests {
     }
 
     #[test]
+    fn day21_input_part_two_custom_steps_2_equality() {
+        let input = get_input("./src/day21/input.txt");
+        let sum_part_two = solve_part_two(&input, 2 * 131 + 65, 1);
+        let sum_part_two_extrapolate = solve_part_two(&input, 2 * 131 + 65, 131);
+        assert_eq!(sum_part_two, sum_part_two_extrapolate);
+    }
+
+    #[test]
     fn day21_input_part_two_custom_steps_3() {
         let input = get_input("./src/day21/input.txt");
         let sum_part_two = solve_part_two(&input, 3 * 131 + 65, 131);
         assert_eq!(
-            (13 * 7520)
+            (9 * 7457 + 4 * 7520)
+                + 5678
+                + 5678
+                + 5674
+                + 5674
                 + 2 * 6611
                 + 2 * 6587
                 + 2 * 6587
@@ -524,14 +584,33 @@ mod tests {
     }
 
     #[test]
+    fn day21_input_part_two_custom_steps_3_equality() {
+        let input = get_input("./src/day21/input.txt");
+        let sum_part_two = solve_part_two(&input, 3 * 131 + 65, 1);
+        let sum_part_two_extrapolate = solve_part_two(&input, 3 * 131 + 65, 131);
+        assert_eq!(sum_part_two, sum_part_two_extrapolate);
+    }
+
+    #[test]
+    fn day21_input_part_two_custom_steps_4_equality() {
+        let input = get_input("./src/day21/input.txt");
+        let sum_part_two = solve_part_two(&input, 4 * 131 + 65, 1);
+        let sum_part_two_extrapolate = solve_part_two(&input, 4 * 131 + 65, 131);
+        assert_eq!(sum_part_two, sum_part_two_extrapolate);
+    }
+
+    #[test]
+    fn day21_input_part_two_fraction() {
+        let input = get_input("./src/day21/input.txt");
+        let sum_part_two = solve_part_two(&input, 202300 * 131 + 65, 131);
+        assert_eq!(612941134797232, sum_part_two);
+    }
+
+    #[test]
     fn day21_input_part_two() {
         let input = get_input("./src/day21/input.txt");
         let sum_part_two = solve_part_two(&input, 26501365, 131);
-        assert_eq!(615513342883114, sum_part_two);
-        // 615519428067232 too high multiple + even
-        // 615513342883114 too high multiple - 1 + even
-        // 610362867016969 wrong as well, multiple + !even
-        // 610356832812199 too low multiple -1 + !even
+        assert_eq!(612941134797232, sum_part_two);
     }
 
     #[bench]
