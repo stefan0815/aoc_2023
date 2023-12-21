@@ -3,6 +3,13 @@ use std::{
     fs,
 };
 
+struct World {
+    pos: (i128, i128),
+    current_positions: HashSet<(usize, usize)>,
+    last_result: usize,
+    last_last_result: usize,
+}
+
 fn find_start(input: &Vec<Vec<char>>) -> (usize, usize) {
     let mut start: Option<(usize, usize)> = None;
     for row in 0..input.len() {
@@ -62,16 +69,46 @@ fn convert_pos(input_size: &(usize, usize), pos: &(i128, i128)) -> (usize, usize
     (row, col)
 }
 
-fn get_neighbours_part_two(input: &Vec<Vec<char>>, pos: &(i128, i128)) -> Vec<(i128, i128)> {
+fn get_neighbours_part_two(
+    input: &Vec<Vec<char>>,
+    pos: &(usize, usize),
+) -> Vec<((i128, i128), (usize, usize))> {
     let possible_neighbors: Vec<(i128, i128)> = vec![(1, 0), (-1, 0), (0, 1), (0, -1)];
-    let mut neighbors: Vec<(i128, i128)> = Vec::new();
+    let mut neighbors: Vec<((i128, i128), (usize, usize))> = Vec::new();
+
     possible_neighbors.iter().for_each(|delta| {
         let converted_pos = convert_pos(
             &(input.len(), input[0].len()),
-            &(pos.0 + delta.0, pos.1 + delta.1),
+            &(pos.0 as i128 + delta.0, pos.1 as i128 + delta.1),
         );
+
+        let mut world_delta: (i128, i128) = (0, 0);
+        match delta {
+            (1, 0) => {
+                if converted_pos.0 < pos.0 {
+                    world_delta = *delta;
+                }
+            }
+            (-1, 0) => {
+                if converted_pos.0 > pos.0 {
+                    world_delta = *delta;
+                }
+            }
+            (0, 1) => {
+                if converted_pos.1 < pos.1 {
+                    world_delta = *delta;
+                }
+            }
+            (0, -1) => {
+                if converted_pos.1 > pos.1 {
+                    world_delta = *delta;
+                }
+            }
+            _ => panic!("delta does not match"),
+        }
+
         if input[converted_pos.0][converted_pos.1] != '#' {
-            neighbors.push(*delta);
+            neighbors.push((world_delta, converted_pos));
         }
     });
     neighbors
@@ -82,7 +119,7 @@ fn solve_part_one(input: &Vec<Vec<char>>, steps: usize) -> usize {
     let mut current_positions: HashSet<(usize, usize)> = HashSet::new();
     let mut neighbours: HashMap<(usize, usize), Vec<(usize, usize)>> = HashMap::new();
     current_positions.insert(start);
-    let mut results : Vec<usize> = Vec::new();
+    let mut results: Vec<usize> = Vec::new();
 
     for _ in 0..steps {
         let mut next_positions: HashSet<(usize, usize)> = HashSet::new();
@@ -105,25 +142,88 @@ fn solve_part_one(input: &Vec<Vec<char>>, steps: usize) -> usize {
 fn solve_part_two(input: &Vec<Vec<char>>, steps: usize) -> usize {
     let start = find_start(input);
     let mut current_positions: HashSet<(i128, i128)> = HashSet::new();
-    let mut neighbours_delta: HashMap<(usize, usize), Vec<(i128, i128)>> = HashMap::new();
+    let mut worlds: HashMap<(i128, i128), World> = HashMap::new();
+    let mut neighbours_delta: HashMap<(usize, usize), Vec<((i128, i128), (usize, usize))>> =
+        HashMap::new();
     current_positions.insert((start.0 as i128, start.1 as i128));
+    let mut finished_worlds: HashMap<(i128, i128), (usize, usize)> = HashMap::new();
 
-    let mut results : Vec<usize> = Vec::new();
-    for _ in 0..steps {
-        let mut next_positions: HashSet<(i128, i128)> = HashSet::new();
-        current_positions.iter().for_each(|pos| {
-            let converted_pos = convert_pos(&(input.len(), input[0].len()), pos);
-            if !neighbours_delta.contains_key(&converted_pos) {
-                neighbours_delta.insert(converted_pos, get_neighbours_part_two(input, pos));
-            }
-            neighbours_delta[&converted_pos].iter().for_each(|delta| {
-                next_positions.insert((pos.0 + delta.0, pos.1 + delta.1));
+    for step in 0..steps {
+        let mut new_worlds: HashMap<(i128, i128), World> = HashMap::new();
+        let mut next_other_world_positions: HashMap<(i128, i128), HashSet<(usize, usize)>> =
+            HashMap::new();
+        for (world_pos, world) in &worlds {
+            let mut next_positions: HashSet<(usize, usize)> = HashSet::new();
+            world.current_positions.iter().for_each(|pos| {
+                if !neighbours_delta.contains_key(pos) {
+                    neighbours_delta.insert(*pos, get_neighbours_part_two(input, pos));
+                }
+                neighbours_delta[&pos]
+                    .iter()
+                    .for_each(|(delta_world, new_pos)| {
+                        if delta_world.0 == 0 && delta_world.1 == 0 {
+                            next_positions.insert(*new_pos);
+                        }
+                        let other_world_pos: (i128, i128) =
+                            (world_pos.0 + delta_world.0, world_pos.1 + delta_world.1);
+                        if !finished_worlds.contains_key(&other_world_pos) {
+                            if next_other_world_positions.contains_key(&other_world_pos) {
+                                next_other_world_positions
+                                    .get_mut(&other_world_pos)
+                                    .unwrap()
+                                    .insert(*pos);
+                            } else {
+                                let mut other_world_positions: HashSet<(usize, usize)> =
+                                    HashSet::new();
+                                other_world_positions.insert(*pos);
+                                next_other_world_positions
+                                    .insert(other_world_pos, other_world_positions);
+                            }
+                        }
+                    });
             });
-        });
-        current_positions = next_positions;
-        results.push(current_positions.len());
+            let result = next_positions.len();
+            if result == world.last_last_result {
+                println!("World ({},{}) converged", world_pos.0, world_pos.1);
+                if step % 2 == 0 {
+                    finished_worlds.insert(*world_pos, (result, world.last_result));
+                } else {
+                    finished_worlds.insert(*world_pos, (world.last_result, result));
+                }
+                continue;
+            }
+            let new_world = World {
+                pos: *world_pos,
+                current_positions: next_positions,
+                last_result: result,
+                last_last_result: world.last_result,
+            };
+            new_worlds.insert(*world_pos, new_world);
+        }
+        for (next_other_world_pos, other_world_positions) in next_other_world_positions {
+            if finished_worlds.contains_key(&next_other_world_pos) {
+                continue;
+            }
+            if new_worlds.contains_key(&next_other_world_pos) {
+                new_worlds
+                    .get_mut(&next_other_world_pos)
+                    .unwrap()
+                    .current_positions
+                    .extend(other_world_positions);
+            } else {
+                let new_result = other_world_positions.len();
+                let new_world = World {
+                    pos: next_other_world_pos,
+                    current_positions: other_world_positions,
+                    last_result: new_result,
+                    last_last_result: 0,
+                };
+                new_worlds.insert(next_other_world_pos, new_world);
+            }
+        }
+
+        worlds = new_worlds;
     }
-    println!("{:?}", results);
     current_positions.len()
 }
 
