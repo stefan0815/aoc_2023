@@ -3,8 +3,9 @@ use std::{
     fs,
 };
 
+use num::Integer;
+
 struct World {
-    pos: (i128, i128),
     current_positions: HashSet<(usize, usize)>,
     last_result: usize,
     last_last_result: usize,
@@ -141,11 +142,19 @@ fn solve_part_one(input: &Vec<Vec<char>>, steps: usize) -> usize {
 
 fn solve_part_two(input: &Vec<Vec<char>>, steps: usize) -> usize {
     let start = find_start(input);
-    let mut current_positions: HashSet<(i128, i128)> = HashSet::new();
+    let mut current_positions: HashSet<(usize, usize)> = HashSet::new();
+    current_positions.insert((start.0, start.1));
+
     let mut worlds: HashMap<(i128, i128), World> = HashMap::new();
+    let start_world = World {
+        current_positions: current_positions.clone(),
+        last_result:1,
+        last_last_result:0,
+    };
+    worlds.insert((0,0), start_world);
+
     let mut neighbours_delta: HashMap<(usize, usize), Vec<((i128, i128), (usize, usize))>> =
         HashMap::new();
-    current_positions.insert((start.0 as i128, start.1 as i128));
     let mut finished_worlds: HashMap<(i128, i128), (usize, usize)> = HashMap::new();
 
     for step in 0..steps {
@@ -184,8 +193,8 @@ fn solve_part_two(input: &Vec<Vec<char>>, steps: usize) -> usize {
             });
             let result = next_positions.len();
             if result == world.last_last_result {
-                println!("World ({},{}) converged", world_pos.0, world_pos.1);
-                if step % 2 == 0 {
+                // println!("World ({},{}) converged with result: {result}", world_pos.0, world_pos.1);
+                if step.is_even() {
                     finished_worlds.insert(*world_pos, (result, world.last_result));
                 } else {
                     finished_worlds.insert(*world_pos, (world.last_result, result));
@@ -193,7 +202,6 @@ fn solve_part_two(input: &Vec<Vec<char>>, steps: usize) -> usize {
                 continue;
             }
             let new_world = World {
-                pos: *world_pos,
                 current_positions: next_positions,
                 last_result: result,
                 last_last_result: world.last_result,
@@ -213,7 +221,6 @@ fn solve_part_two(input: &Vec<Vec<char>>, steps: usize) -> usize {
             } else {
                 let new_result = other_world_positions.len();
                 let new_world = World {
-                    pos: next_other_world_pos,
                     current_positions: other_world_positions,
                     last_result: new_result,
                     last_last_result: 0,
@@ -224,7 +231,22 @@ fn solve_part_two(input: &Vec<Vec<char>>, steps: usize) -> usize {
 
         worlds = new_worlds;
     }
-    current_positions.len()
+    let mut result = 0;
+    for (world_pos, world) in worlds {
+        if finished_worlds.contains_key(&world_pos){
+            continue;
+        }
+        result += world.last_result;
+    }
+    for (_, (result_even, result_odd)) in finished_worlds {
+        if steps.is_even() {
+            result += result_even;
+        }else{
+            result += result_odd;
+
+        }
+    }
+    result
 }
 
 fn get_input(file: &str) -> Vec<Vec<char>> {
