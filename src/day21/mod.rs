@@ -45,6 +45,40 @@ fn get_neighbours(input: &Vec<Vec<char>>, pos: &(usize, usize)) -> Vec<(usize, u
     neighbors
 }
 
+fn convert_pos (input_size: &(usize, usize), pos: &(i128, i128)) -> (usize, usize) {
+    let mut row = pos.0;
+    if pos.0 < 0 {
+        let multiple = (-pos.0) as usize / input_size.0;
+        row += ((multiple + 1) * input_size.0) as i128;
+    }
+    let row = row as usize % input_size.0;
+
+    let mut col = pos.1;
+    if pos.1 < 0 {
+        let multiple = (-pos.1) as usize / input_size.1;
+        col += ((multiple + 1) * input_size.1) as i128;
+    }
+    let col = col as usize % input_size.1;
+    (row, col)
+}
+
+fn get_neighbours_part_two(input: &Vec<Vec<char>>, pos: &(i128, i128)) -> Vec<(i128, i128)> {
+    let possible_neighbors: Vec<(i128, i128)> = vec![
+        (pos.0 - 1, pos.1),
+        (pos.0 + 1, pos.1),
+        (pos.0, pos.1 - 1),
+        (pos.0, pos.1 + 1),
+    ];
+    let mut neighbors: Vec<(i128, i128)> = Vec::new();
+    possible_neighbors.iter().for_each(|pos| {
+        let converted_pos = convert_pos(&(input.len(), input[0].len()), pos);
+        if input[converted_pos.0][converted_pos.1] != '#' {
+            neighbors.push(*pos);
+        }
+    });
+    neighbors
+}
+
 fn solve_part_one(input: &Vec<Vec<char>>, steps: usize) -> usize {
     let start = find_start(input);
     let mut current_positions: HashSet<(usize, usize)> = HashSet::new();
@@ -66,8 +100,25 @@ fn solve_part_one(input: &Vec<Vec<char>>, steps: usize) -> usize {
     current_positions.len()
 }
 
-fn solve_part_two(_: &Vec<Vec<char>>) -> usize {
-    0
+fn solve_part_two(input: &Vec<Vec<char>>, steps: usize) -> usize {
+    let start = find_start(input);
+    let mut current_positions: HashSet<(i128,i128)> = HashSet::new();
+    let mut neighbours: HashMap<(i128,i128), Vec<(i128,i128)>> = HashMap::new();
+    current_positions.insert((start.0 as i128, start.1 as i128));
+
+    for _ in 0..steps {
+        let mut next_positions: HashSet<(i128,i128)> = HashSet::new();
+        current_positions.iter().for_each(|pos| {
+            if !neighbours.contains_key(pos) {
+                neighbours.insert(*pos, get_neighbours_part_two(input, pos));
+            }
+            neighbours[pos].iter().for_each(|next_pos| {
+                next_positions.insert(*next_pos);
+            });
+        });
+        current_positions = next_positions;
+    }
+    current_positions.len()
 }
 
 fn get_input(file: &str) -> Vec<Vec<char>> {
@@ -83,7 +134,7 @@ pub fn solver() {
     let input = get_input("./src/day21/input.txt");
     let sum_part_one = solve_part_one(&input, 64);
     println!("Part 1: {sum_part_one}");
-    let sum_part_two = solve_part_two(&input);
+    let sum_part_two = solve_part_two(&input, 26501365);
     println!("Part 2: {sum_part_two}");
 }
 
@@ -106,17 +157,59 @@ mod tests {
         assert_eq!(3649, sum_part_one);
     }
 
-    // #[test]
-    // fn day21_example_input_part_two() {
-    //     let input = get_input("./src/day21/example_input.txt");
-    //     let sum_part_two = solve_part_two(&input);
-    //     assert_eq!(167409079868000, sum_part_two);
-    // }
+    #[test]
+    fn day21_example_input_part_two_6_steps() {
+        let input = get_input("./src/day21/example_input.txt");
+        let sum_part_two = solve_part_two(&input, 6);
+        assert_eq!(16, sum_part_two);
+    }
+
+    #[test]
+    fn day21_example_input_part_two_10_steps() {
+        let input = get_input("./src/day21/example_input.txt");
+        let sum_part_two = solve_part_two(&input, 10);
+        assert_eq!(50, sum_part_two);
+    }
+
+    #[test]
+    fn day21_example_input_part_two_50_steps() {
+        let input = get_input("./src/day21/example_input.txt");
+        let sum_part_two = solve_part_two(&input, 50);
+        assert_eq!(1594, sum_part_two);
+    }
+
+    #[test]
+    fn day21_example_input_part_two_100_steps() {
+        let input = get_input("./src/day21/example_input.txt");
+        let sum_part_two = solve_part_two(&input, 100);
+        assert_eq!(6536, sum_part_two);
+    }
+
+    #[test]
+    fn day21_example_input_part_two_500_steps() {
+        let input = get_input("./src/day21/example_input.txt");
+        let sum_part_two = solve_part_two(&input, 500);
+        assert_eq!(167004, sum_part_two);
+    }
+
+    #[test]
+    fn day21_example_input_part_two_1000_steps() {
+        let input = get_input("./src/day21/example_input.txt");
+        let sum_part_two = solve_part_two(&input, 1000);
+        assert_eq!(668697, sum_part_two);
+    }
+
+    #[test]
+    fn day21_example_input_part_two_5000_steps() {
+        let input = get_input("./src/day21/example_input.txt");
+        let sum_part_two = solve_part_two(&input, 5000);
+        assert_eq!(16733044, sum_part_two);
+    }
 
     #[test]
     fn day21_input_part_two() {
         let input = get_input("./src/day21/input.txt");
-        let sum_part_two = solve_part_two(&input);
+        let sum_part_two = solve_part_two(&input, 26501365);
         assert_eq!(240853834793347, sum_part_two);
     }
 
