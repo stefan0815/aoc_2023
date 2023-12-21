@@ -341,8 +341,11 @@ fn solve_part_two(input: &Vec<Vec<char>>, steps: usize, finish_cycle: usize) -> 
         let (multiple_finished_worlds, last_step) = calculate_multiple_worlds(multiple);
         println!("multiple: {multiple}, possibly_finished_worlds : {multiple_finished_worlds}");
         let corner_multiple = last_step / 4;
+        println!("corner_multiple: {corner_multiple}");
         let diag_corner_multiple = corner_multiple + 1;
-        let (_, one_world_result) = get_result(&worlds, &finished_worlds, true);
+        println!("diag_corner_multiple: {diag_corner_multiple}");
+
+        let (_, one_world_result) = get_result(&worlds, &finished_worlds, multiple.is_odd());
         println!("{one_world_result}");
         let left = worlds[&(0, -2)].last_result; //5678;
         let right = worlds[&(0, 2)].last_result; //5674;
@@ -484,7 +487,22 @@ mod tests {
     fn day21_input_part_two_custom_steps_2() {
         let input = get_input("./src/day21/input.txt");
         let sum_part_two = solve_part_two(&input, 2 * 131 + 65, 131);
-        assert_eq!(94308, sum_part_two);
+        assert_eq!(
+            5 * 7457
+                + 5678
+                + 5678
+                + 5674
+                + 5674
+                + 6611
+                + 6587
+                + 6587
+                + 6607
+                + 2 * 943
+                + 2 * 948
+                + 2 * 950
+                + 2 * 965,
+            sum_part_two
+        );
     }
 
     #[test]
@@ -492,7 +510,15 @@ mod tests {
         let input = get_input("./src/day21/input.txt");
         let sum_part_two = solve_part_two(&input, 3 * 131 + 65, 131);
         assert_eq!(
-            94308 + 8 * 7520 + 6611 + 6587 + 6587 + 6607 + 943 + 948 + 950 + 965,
+            (13 * 7520)
+                + 2 * 6611
+                + 2 * 6587
+                + 2 * 6587
+                + 2 * 6607
+                + 3 * 943
+                + 3 * 948
+                + 3 * 950
+                + 3 * 965,
             sum_part_two
         );
     }
