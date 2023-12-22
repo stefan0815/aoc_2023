@@ -55,10 +55,10 @@ fn get_terrain_height(height_map: &HashMap<(usize, usize), usize>, block: &Block
     height
 }
 
-fn settle_blocks(blocks: &Vec<Block>) -> (Vec<Block>, HashMap<(usize, usize), usize>) {
+fn settle_blocks(blocks: &Vec<Block>) -> (Vec<Block>, usize) {
     let mut settled_blocks: Vec<Block> = Vec::new();
     let mut height_map: HashMap<(usize, usize), usize> = HashMap::new();
-
+    let mut num_fallen_blocks = 0;
     blocks.iter().for_each(|block| {
         if block.start[2] == 1 {
             update_height_map(&mut height_map, block);
@@ -79,12 +79,13 @@ fn settle_blocks(blocks: &Vec<Block>) -> (Vec<Block>, HashMap<(usize, usize), us
             settled_block.end[2] -= fall_distance;
             update_height_map(&mut height_map, &settled_block);
             settled_blocks.push(settled_block);
+            num_fallen_blocks += 1;
             return;
         }
         panic!("New Special case detected");
     });
 
-    (settled_blocks, height_map)
+    (settled_blocks, num_fallen_blocks)
 }
 
 fn solve_part_one(input: &Vec<String>) -> usize {
@@ -95,8 +96,8 @@ fn solve_part_one(input: &Vec<String>) -> usize {
     for i in 0..settled_blocks.len() {
         let mut blocks_after_disintegration = settled_blocks.clone();
         blocks_after_disintegration.remove(i);
-        let (settled_blocks_after_disintegration, _) = settle_blocks(&blocks_after_disintegration);
-        if settled_blocks_after_disintegration == blocks_after_disintegration {
+        let (_, num_fallen_blocks) = settle_blocks(&blocks_after_disintegration);
+        if num_fallen_blocks == 0 {
             disintegrateable_blocks += 1;
         }
     }
@@ -106,7 +107,18 @@ fn solve_part_one(input: &Vec<String>) -> usize {
 
 fn solve_part_two(input: &Vec<String>) -> usize {
     let _ = parse_input(&input);
-    0
+    let blocks = parse_input(&input);
+    let sorted_blocks = sort_blocks(&blocks);
+    let (settled_blocks, _) = settle_blocks(&sorted_blocks);
+    let mut sum_fallen_bricks = 0;
+    for i in 0..settled_blocks.len() {
+        let mut blocks_after_disintegration = settled_blocks.clone();
+        blocks_after_disintegration.remove(i);
+        let (_, num_fallen_blocks) = settle_blocks(&blocks_after_disintegration);
+        sum_fallen_bricks += num_fallen_blocks
+    }
+
+    sum_fallen_bricks
 }
 
 fn get_input(file: &str) -> Vec<String> {
@@ -149,14 +161,14 @@ mod tests {
     fn day22_example_input_part_two() {
         let input = get_input("./src/day22/example_input.txt");
         let sum_part_two = solve_part_two(&input);
-        assert_eq!(167409079868000, sum_part_two);
+        assert_eq!(7, sum_part_two);
     }
 
     #[test]
     fn day22_input_part_two() {
         let input = get_input("./src/day22/input.txt");
         let sum_part_two = solve_part_two(&input);
-        assert_eq!(240853834793347, sum_part_two);
+        assert_eq!(102770, sum_part_two);
     }
 
     #[bench]
