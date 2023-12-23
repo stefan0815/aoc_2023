@@ -63,29 +63,57 @@ fn try_get_value(layout: &Vec<Vec<char>>, position: &(i128, i128)) -> Option<cha
     return None;
 }
 
-fn step(layout: &Vec<Vec<char>>, route: &Vec<(i128, i128)>) -> usize {
+fn step(layout: &Vec<Vec<char>>, route: &Vec<(i128, i128)>, goal: &(i128, i128)) -> usize {
     let successors = get_successors(layout, route);
-    let mut best_route = route.len();
+    let mut longest_route = 0;
     for successor in &successors {
+        if successor.last().unwrap() == goal {
+            return route.len() + successor.len();
+        }
         let mut new_route = route.clone();
         new_route.extend(successor);
-        let new_route = step(layout, &new_route);
-        if new_route > best_route {
-            best_route = new_route;
+        let new_route = step(layout, &new_route, goal);
+        if new_route > longest_route {
+            longest_route = new_route;
         }
     }
-    best_route
+    longest_route
 }
 
 fn solve_part_one(layout: &Vec<Vec<char>>) -> usize {
-    let start: (usize, usize) = (0, layout[0].iter().position(|c| *c == '.').unwrap());
+    let start: (i128, i128) = (
+        0,
+        layout
+            .first()
+            .unwrap()
+            .iter()
+            .position(|c| *c == '.')
+            .unwrap() as i128,
+    );
+    let goal: (i128, i128) = (
+        layout.len() as i128 - 1,
+        layout
+            .last()
+            .unwrap()
+            .iter()
+            .position(|c| *c == '.')
+            .unwrap() as i128,
+    );
     let route: Vec<(i128, i128)> = vec![(start.0 as i128, start.1 as i128)];
-    let longest_route = step(layout, &route);
+    let longest_route = step(layout, &route, &goal);
     longest_route - 1
 }
 
-fn solve_part_two(_: &Vec<Vec<char>>) -> usize {
-    0
+fn solve_part_two(layout: &Vec<Vec<char>>) -> usize {
+    let mut clean_layout = layout.clone();
+    for row in 0..layout.len() {
+        for col in 0..layout[row].len() {
+            if layout[row][col] != '#' {
+                clean_layout[row][col] = '.'
+            }
+        }
+    }
+    solve_part_one(&clean_layout)
 }
 
 fn get_input(file: &str) -> Vec<Vec<char>> {
@@ -128,7 +156,7 @@ mod tests {
     fn day23_example_input_part_two() {
         let input = get_input("./src/day23/example_input.txt");
         let sum_part_two = solve_part_two(&input);
-        assert_eq!(7, sum_part_two);
+        assert_eq!(154, sum_part_two);
     }
 
     #[test]
