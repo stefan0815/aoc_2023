@@ -56,6 +56,38 @@ fn get_successors(
     get_successors
 }
 
+fn get_successors_part_two(
+    layout: &Vec<Vec<char>>,
+    route: &Vec<(i128, i128)>,
+    pos: &(i128, i128),
+) -> Vec<(i128, i128)> {
+    let possible_next_positions = vec![
+        (pos.0 + 1, pos.1),
+        (pos.0, pos.1 + 1),
+        (pos.0 - 1, pos.1),
+        (pos.0, pos.1 - 1),
+    ];
+    let mut get_successors: Vec<(i128, i128)> = Vec::new();
+    for next_position in possible_next_positions {
+        let terrain = try_get_value(layout, &next_position);
+        if terrain.is_none() {
+            continue;
+        }
+
+        if route.contains(&next_position) {
+            continue;
+        }
+
+        let terrain = terrain.unwrap();
+        match terrain {
+            '#' => continue,
+            '.' => get_successors.push(next_position),
+            _ => panic!("Unexpected Tile found {}", terrain),
+        }
+    }
+    get_successors
+}
+
 fn try_get_value(layout: &Vec<Vec<char>>, position: &(i128, i128)) -> Option<char> {
     if 0 <= position.0
         && position.0 < layout.len() as i128
@@ -85,6 +117,44 @@ fn step(
         if new_route > longest_route {
             longest_route = new_route;
         }
+    }
+    longest_route
+}
+
+fn step_part_two(layout: &Vec<Vec<char>>, route: &Vec<(i128, i128)>, goal: &(i128, i128)) -> usize {
+    let mut new_route = route.clone();
+    let mut successors: Vec<(i128, i128)>;
+    loop {
+        successors = get_successors_part_two(layout, &new_route, new_route.last().unwrap());
+        // println!("successors: {:?}", successors);
+        if successors.len() == 0 {
+            if new_route.last().unwrap() == goal {
+                return new_route.len();
+            }
+            return 0;
+        }
+        if successors.len() > 1 {
+            break;
+        }
+
+        let successor = successors.first().unwrap();
+        if successor == goal {
+            return new_route.len() + 1;
+        }
+        new_route.push(*successor);
+    }
+    // println!("{:?}", new_route);
+    let mut longest_route = 0;
+    for successor in successors {
+        if successor == *goal {
+            return new_route.len() + 1;
+        }
+        new_route.push(successor);
+        let new_route_length = step_part_two(layout, &new_route, goal);
+        if new_route_length > longest_route {
+            longest_route = new_route_length;
+        }
+        new_route.pop();
     }
     longest_route
 }
@@ -123,7 +193,28 @@ fn solve_part_two(layout: &Vec<Vec<char>>) -> usize {
             }
         }
     }
-    solve_part_one(&clean_layout)
+    let start: (i128, i128) = (
+        0,
+        layout
+            .first()
+            .unwrap()
+            .iter()
+            .position(|c| *c == '.')
+            .unwrap() as i128,
+    );
+    let goal: (i128, i128) = (
+        layout.len() as i128 - 1,
+        layout
+            .last()
+            .unwrap()
+            .iter()
+            .position(|c| *c == '.')
+            .unwrap() as i128,
+    );
+    let mut route: Vec<(i128, i128)> = Vec::new();
+    route.push(start);
+    let longest_route = step_part_two(&clean_layout, &route, &goal);
+    longest_route - 1
 }
 
 fn get_input(file: &str) -> Vec<Vec<char>> {
