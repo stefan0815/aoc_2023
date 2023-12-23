@@ -1,6 +1,10 @@
-use std::{fs, collections::HashSet};
+use std::fs;
 
-fn get_successors(layout: &Vec<Vec<char>>, route: &HashSet<(i128, i128)>, pos: &(i128,i128)) -> Vec<Vec<(i128, i128)>> {
+fn get_successors(
+    layout: &Vec<Vec<char>>,
+    route: &Vec<(i128, i128)>,
+    pos: &(i128, i128),
+) -> Vec<Vec<(i128, i128)>> {
     let possible_next_positions = vec![
         (pos.0 + 1, pos.1),
         (pos.0, pos.1 + 1),
@@ -13,6 +17,7 @@ fn get_successors(layout: &Vec<Vec<char>>, route: &HashSet<(i128, i128)>, pos: &
         if terrain.is_none() {
             continue;
         }
+
         if route.contains(&next_position) {
             continue;
         }
@@ -62,7 +67,12 @@ fn try_get_value(layout: &Vec<Vec<char>>, position: &(i128, i128)) -> Option<cha
     return None;
 }
 
-fn step(layout: &Vec<Vec<char>>, route: &HashSet<(i128, i128)>, pos: &(i128,i128), goal: &(i128, i128)) -> usize {
+fn step(
+    layout: &Vec<Vec<char>>,
+    route: &Vec<(i128, i128)>,
+    pos: &(i128, i128),
+    goal: &(i128, i128),
+) -> usize {
     let successors = get_successors(layout, route, pos);
     let mut longest_route = 0;
     for successor in &successors {
@@ -71,7 +81,7 @@ fn step(layout: &Vec<Vec<char>>, route: &HashSet<(i128, i128)>, pos: &(i128,i128
         }
         let mut new_route = route.clone();
         new_route.extend(successor);
-        let new_route = step(layout, &new_route, successor.last().unwrap(), goal);
+        let new_route = step(layout, &new_route, new_route.last().unwrap(), goal);
         if new_route > longest_route {
             longest_route = new_route;
         }
@@ -98,8 +108,8 @@ fn solve_part_one(layout: &Vec<Vec<char>>) -> usize {
             .position(|c| *c == '.')
             .unwrap() as i128,
     );
-    let mut route: HashSet<(i128, i128)> = HashSet::new();
-    route.insert(start);
+    let mut route: Vec<(i128, i128)> = Vec::new();
+    route.push(start);
     let longest_route = step(layout, &route, &start, &goal);
     longest_route - 1
 }
