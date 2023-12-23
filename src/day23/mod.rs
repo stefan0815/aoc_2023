@@ -1,4 +1,4 @@
-use std::{cmp::max, fs};
+use std::fs;
 
 fn get_successors(layout: &Vec<Vec<char>>, route: &Vec<(i128, i128)>) -> Vec<Vec<(i128, i128)>> {
     let pos: &(i128, i128) = route.last().unwrap();
@@ -63,14 +63,14 @@ fn try_get_value(layout: &Vec<Vec<char>>, position: &(i128, i128)) -> Option<cha
     return None;
 }
 
-fn step(layout: &Vec<Vec<char>>, route: &Vec<(i128, i128)>) -> Vec<(i128, i128)> {
+fn step(layout: &Vec<Vec<char>>, route: &Vec<(i128, i128)>) -> usize {
     let successors = get_successors(layout, route);
-    let mut best_route = route.to_vec();
+    let mut best_route = route.len();
     for successor in &successors {
         let mut new_route = route.clone();
         new_route.extend(successor);
         let new_route = step(layout, &new_route);
-        if new_route.len() > best_route.len() {
+        if new_route > best_route {
             best_route = new_route;
         }
     }
@@ -81,16 +81,10 @@ fn solve_part_one(layout: &Vec<Vec<char>>) -> usize {
     let start: (usize, usize) = (0, layout[0].iter().position(|c| *c == '.').unwrap());
     let route: Vec<(i128, i128)> = vec![(start.0 as i128, start.1 as i128)];
     let longest_route = step(layout, &route);
-    println!("{:?}", longest_route);
-    let mut walked_layout = layout.clone();
-    for tile in &longest_route {
-        walked_layout[tile.0 as usize][tile.1 as usize] = '0';
-    }
-    println!("{:?}", walked_layout);
-    longest_route.len() - 1
+    longest_route - 1
 }
 
-fn solve_part_two(layout: &Vec<Vec<char>>) -> usize {
+fn solve_part_two(_: &Vec<Vec<char>>) -> usize {
     0
 }
 
@@ -127,7 +121,7 @@ mod tests {
     fn day23_input_part_one() {
         let input = get_input("./src/day23/input.txt");
         let sum_part_one = solve_part_one(&input);
-        assert_eq!(509, sum_part_one);
+        assert_eq!(2042, sum_part_one);
     }
 
     #[test]
