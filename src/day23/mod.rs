@@ -122,7 +122,7 @@ fn step(
 }
 
 fn step_part_two(layout: &Vec<Vec<char>>, route: &Vec<(i128, i128)>, goal: &(i128, i128)) -> usize {
-    let mut new_route = route.clone();
+    let mut new_route: Vec<(i128, i128)> = route.clone();
     let mut successors: Vec<(i128, i128)>;
     loop {
         successors = get_successors_part_two(layout, &new_route, new_route.last().unwrap());
@@ -133,6 +133,7 @@ fn step_part_two(layout: &Vec<Vec<char>>, route: &Vec<(i128, i128)>, goal: &(i12
             }
             return 0;
         }
+
         if successors.len() > 1 {
             break;
         }
@@ -143,12 +144,16 @@ fn step_part_two(layout: &Vec<Vec<char>>, route: &Vec<(i128, i128)>, goal: &(i12
         }
         new_route.push(*successor);
     }
+    // println!("Split: {}, current_length: {}", successors.len(), new_route.len());
+    for successor in &successors {
+        if successor == goal {
+            return new_route.len() + 1;
+        }
+    }
+
     // println!("{:?}", new_route);
     let mut longest_route = 0;
     for successor in successors {
-        if successor == *goal {
-            return new_route.len() + 1;
-        }
         new_route.push(successor);
         let new_route_length = step_part_two(layout, &new_route, goal);
         if new_route_length > longest_route {
