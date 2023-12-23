@@ -1,4 +1,12 @@
-use std::fs;
+use std::{collections::HashMap, fs};
+
+// fn print_layout_with_route(layout: &Vec<Vec<char>>, route: &Vec<(i128, i128)>){
+//     let mut print_layout = layout.to_vec();
+//     for tile in route {
+//         print_layout[tile.0 as usize][tile.1 as usize] = '0';
+//     }
+//     println!("{:?}", print_layout);
+// }
 
 fn get_successors(
     layout: &Vec<Vec<char>>,
@@ -121,14 +129,21 @@ fn step(
     longest_route
 }
 
-fn step_part_two(layout: &Vec<Vec<char>>, route: &Vec<(i128, i128)>, goal: &(i128, i128)) -> usize {
+fn step_part_two(
+    layout: &Vec<Vec<char>>,
+    route: &Vec<(i128, i128)>,
+    goal: &(i128, i128),
+    straight_path_cache: &mut HashMap<(i128, i128), Vec<(i128, i128)>>,
+) -> usize {
     let mut new_route: Vec<(i128, i128)> = route.clone();
     let mut successors: Vec<(i128, i128)>;
+    let mut straight_route: Vec<(i128, i128)> = Vec::new();
     loop {
         successors = get_successors_part_two(layout, &new_route, new_route.last().unwrap());
         // println!("successors: {:?}", successors);
         if successors.len() == 0 {
             if new_route.last().unwrap() == goal {
+                // print_layout_with_route(layout, &new_route);
                 return new_route.len();
             }
             return 0;
@@ -137,16 +152,32 @@ fn step_part_two(layout: &Vec<Vec<char>>, route: &Vec<(i128, i128)>, goal: &(i12
         if successors.len() > 1 {
             break;
         }
-
         let successor = successors.first().unwrap();
         if successor == goal {
+            // print_layout_with_route(layout, &new_route);
             return new_route.len() + 1;
         }
+        if straight_path_cache.contains_key(successor) {
+            new_route.extend(straight_path_cache[successor].to_vec());
+            continue;
+        }
+
+        straight_route.push(*successor);
         new_route.push(*successor);
     }
+
+    if straight_route.len() > 2{
+        straight_path_cache.insert(*straight_route.first().unwrap(), straight_route.to_vec());
+        straight_route.pop();
+        straight_route.pop();
+        straight_route.reverse();
+        straight_path_cache.insert(*straight_route.first().unwrap(), straight_route);
+    }
+
     // println!("Split: {}, current_length: {}", successors.len(), new_route.len());
     for successor in &successors {
         if successor == goal {
+            // print_layout_with_route(layout, &new_route);
             return new_route.len() + 1;
         }
     }
@@ -155,7 +186,7 @@ fn step_part_two(layout: &Vec<Vec<char>>, route: &Vec<(i128, i128)>, goal: &(i12
     let mut longest_route = 0;
     for successor in successors {
         new_route.push(successor);
-        let new_route_length = step_part_two(layout, &new_route, goal);
+        let new_route_length = step_part_two(layout, &new_route, goal, straight_path_cache);
         if new_route_length > longest_route {
             longest_route = new_route_length;
         }
@@ -216,9 +247,11 @@ fn solve_part_two(layout: &Vec<Vec<char>>) -> usize {
             .position(|c| *c == '.')
             .unwrap() as i128,
     );
+    let mut straight_path_cache: HashMap<(i128, i128), Vec<(i128, i128)>> = HashMap::new();
     let mut route: Vec<(i128, i128)> = Vec::new();
     route.push(start);
-    let longest_route = step_part_two(&clean_layout, &route, &goal);
+    let longest_route = step_part_two(&clean_layout, &route, &goal, &mut straight_path_cache);
+    // println!("{:?}", straight_path_cache);
     longest_route - 1
 }
 
