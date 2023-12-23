@@ -130,63 +130,23 @@ fn step(
 }
 
 fn step_part_two(
-    layout: &Vec<Vec<char>>,
+    crossings: &HashMap<(i128, i128), HashMap<(i128, i128), usize>>,
     route: &Vec<(i128, i128)>,
     goal: &(i128, i128),
-    straight_path_cache: &mut HashMap<(i128, i128), Vec<(i128, i128)>>,
+    steps_so_far: usize
 ) -> usize {
-    let mut new_route: Vec<(i128, i128)> = route.clone();
-    let mut successors: Vec<(i128, i128)>;
-    let mut straight_route: Vec<(i128, i128)> = Vec::new();
-    loop {
-        successors = get_successors_part_two(layout, &new_route, new_route.last().unwrap());
-        // println!("successors: {:?}", successors);
-        if successors.len() == 0 {
-            if new_route.last().unwrap() == goal {
-                // print_layout_with_route(layout, &new_route);
-                return new_route.len();
-            }
-            return 0;
-        }
-
-        if successors.len() > 1 {
-            break;
-        }
-        let successor = successors.first().unwrap();
-        if successor == goal {
-            // print_layout_with_route(layout, &new_route);
-            return new_route.len() + 1;
-        }
-        if straight_path_cache.contains_key(successor) {
-            new_route.extend(straight_path_cache[successor].to_vec());
+    let mut longest_route = 0;
+    let current_pos = route.last().unwrap();
+    let mut new_route: Vec<(i128, i128)> = route.to_vec();
+    for successor in &crossings[current_pos] {
+        if route.contains(successor.0){
             continue;
         }
-
-        straight_route.push(*successor);
-        new_route.push(*successor);
-    }
-
-    if straight_route.len() > 2{
-        straight_path_cache.insert(*straight_route.first().unwrap(), straight_route.to_vec());
-        straight_route.pop();
-        straight_route.pop();
-        straight_route.reverse();
-        straight_path_cache.insert(*straight_route.first().unwrap(), straight_route);
-    }
-
-    // println!("Split: {}, current_length: {}", successors.len(), new_route.len());
-    for successor in &successors {
-        if successor == goal {
-            // print_layout_with_route(layout, &new_route);
-            return new_route.len() + 1;
+        if successor.0 == goal {
+            return steps_so_far + *successor.1;
         }
-    }
-
-    // println!("{:?}", new_route);
-    let mut longest_route = 0;
-    for successor in successors {
-        new_route.push(successor);
-        let new_route_length = step_part_two(layout, &new_route, goal, straight_path_cache);
+        new_route.push(successor.0.clone());
+        let new_route_length = step_part_two(crossings, &new_route, goal, steps_so_far + *successor.1);
         if new_route_length > longest_route {
             longest_route = new_route_length;
         }
@@ -229,6 +189,8 @@ fn solve_part_two(layout: &Vec<Vec<char>>) -> usize {
             }
         }
     }
+    let layout = clean_layout;
+
     let start: (i128, i128) = (
         0,
         layout
@@ -247,12 +209,55 @@ fn solve_part_two(layout: &Vec<Vec<char>>) -> usize {
             .position(|c| *c == '.')
             .unwrap() as i128,
     );
-    let mut straight_path_cache: HashMap<(i128, i128), Vec<(i128, i128)>> = HashMap::new();
-    let mut route: Vec<(i128, i128)> = Vec::new();
-    route.push(start);
-    let longest_route = step_part_two(&clean_layout, &route, &goal, &mut straight_path_cache);
-    // println!("{:?}", straight_path_cache);
-    longest_route - 1
+    let mut crossings: HashMap<(i128, i128), HashMap<(i128, i128), usize>> = HashMap::new(); // From crossing to other crossing with distance
+    for row in 0..layout.len() {
+        for col in 0..layout[row].len() {
+            if layout[row][col] != '.' {
+                continue;
+            }
+            let neighbours = get_successors_part_two(
+                &layout,
+                &vec![(row as i128, col as i128)],
+                &(row as i128, col as i128),
+            );
+            if neighbours.len() > 2 {
+                crossings.insert((row as i128, col as i128), HashMap::new());
+            }
+        }
+    }
+    crossings.insert(start, HashMap::new());
+    crossings.insert(goal, HashMap::new());
+    let mut mapped_crossings = crossings.clone();
+    for (crossing_pos, _) in crossings {
+        let neighbours = get_successors_part_two(&layout, &vec![crossing_pos], &crossing_pos);
+        for neighbour in neighbours {
+            let mut route: Vec<(i128, i128)> = vec![crossing_pos, neighbour];
+            loop {
+                let next_positions =
+                    get_successors_part_two(&layout, &route, route.last().unwrap());
+                if next_positions.len() != 1 {
+                    panic!("Invalid path found, next_positions.len(): {}", next_positions.len());
+                }
+                let next_position = next_positions.first().unwrap();
+                if mapped_crossings.contains_key(next_position) {
+                    mapped_crossings
+                        .get_mut(&crossing_pos)
+                        .unwrap()
+                        .insert(*next_position, route.len());
+                    mapped_crossings
+                        .get_mut(next_position)
+                        .unwrap()
+                        .insert(crossing_pos, route.len());
+                    break;
+                }
+                route.push(*next_position);
+            }
+        }
+    }
+    let route = vec![start];
+    let longest_route = step_part_two(&mapped_crossings, &route, &goal, 0);
+
+    longest_route
 }
 
 fn get_input(file: &str) -> Vec<Vec<char>> {
@@ -302,7 +307,7 @@ mod tests {
     fn day23_input_part_two() {
         let input = get_input("./src/day23/input.txt");
         let sum_part_two = solve_part_two(&input);
-        assert_eq!(102770, sum_part_two);
+        assert_eq!(6466, sum_part_two);
     }
 
     #[bench]
